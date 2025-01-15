@@ -1,4 +1,4 @@
-﻿using Microsoft.Toolkit.HighPerformance.Buffers;
+﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -114,10 +114,18 @@ public sealed class BitWriter : IBitWriter, IDisposable
     }
     public void WriteInt32(int value) => WriteInt32(value, sizeof(int) * 8);
 
+    public void WriteUInt64(ulong value, int numberOfBits)
+    {
+        Span<byte> bytes = stackalloc byte[sizeof(ulong)];
+        BitConverter.TryWriteBytes(bytes, value);
+        WriteBytes(bytes, numberOfBits);
+    }
+    public void WriteUInt64(ulong value) => WriteUInt64(value, sizeof(ulong) * 8);
+
     public void WriteString(ReadOnlySpan<char> s, int length) //=> WriteBytes(System.Text.Encoding.ASCII.GetBytes(s), length * 8);
     {
         Span<byte> bytes = length > STACK_MAX ? new byte[length] : stackalloc byte[length];
-        Encoding.ASCII.GetBytes(s.Length > length ? s[..length] : s, bytes);
+        Encoding.UTF8.GetBytes(s.Length > length ? s[..length] : s, bytes);
         WriteBytes(bytes, length * 8);
     }
     

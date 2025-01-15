@@ -7,6 +7,7 @@ public class Attributes
 {
     public ushort? Header { get; set; }
     public Dictionary<string, int> Stats { get; } = new Dictionary<string, int>();
+    public Dictionary<string, int> Extra { get; } = new Dictionary<string, int>();
 
     public static Attributes Read(IBitReader reader)
     {
@@ -23,6 +24,12 @@ public class Attributes
             int valShift = property?["ValShift"].ToInt32() ?? 0;
             if (valShift > 0)
             {
+                int mask = (1 << valShift) - 1;
+                int extra = attribute & mask;
+
+                if (extra != 0)
+                    attributes.Extra.Add(property?["Stat"].Value ?? string.Empty, extra);
+
                 attribute >>= valShift;
             }
             attributes.Stats.Add(property?["Stat"].Value ?? string.Empty, attribute);
@@ -45,6 +52,9 @@ public class Attributes
             if (valShift > 0)
             {
                 attribute <<= valShift;
+
+                if (Extra.TryGetValue(entry.Key, out int extra))
+                    attribute |= extra;
             }
             writer.WriteInt32(attribute, property?["CSvBits"].ToInt32() ?? 0);
         }

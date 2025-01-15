@@ -1,4 +1,4 @@
-﻿using Microsoft.Toolkit.HighPerformance.Buffers;
+﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Buffers;
 using System.Text;
 using static System.Buffers.Binary.BinaryPrimitives;
@@ -125,6 +125,17 @@ public sealed class BitReader : IBitReader, IDisposable
 
     public int ReadInt32() => ReadInt32(sizeof(int) * 8);
 
+    public ulong ReadUInt64(int bits)
+    {
+        if ((uint)bits > sizeof(ulong) * 8) throw new ArgumentOutOfRangeException(nameof(bits));
+        Span<byte> bytes = stackalloc byte[sizeof(ulong)];
+        bytes.Clear();
+        ReadBits(bits, bytes);
+        return ReadUInt64LittleEndian(bytes);
+    }
+
+    public ulong ReadUInt64() => ReadUInt64(sizeof(ulong) * 8);
+
     public string ReadString(int byteCount)
     {
         using var pooledBytes = byteCount > STACK_MAX ? SpanOwner<byte>.Allocate(byteCount) : SpanOwner<byte>.Empty;
@@ -132,7 +143,7 @@ public sealed class BitReader : IBitReader, IDisposable
         bytes.Clear();
         int readBytes = ReadBytes(bytes);
         bytes = bytes[..readBytes];
-        return Encoding.ASCII.GetString(bytes.Trim((byte)0));
+        return Encoding.UTF8.GetString(bytes.Trim((byte)0));
     }
 
     public void AdvanceBits(int bits) => Position += bits;

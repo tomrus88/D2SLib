@@ -24,6 +24,8 @@ public interface IBitReader
     ushort ReadUInt16(int bits);
     uint ReadUInt32();
     uint ReadUInt32(int bits);
+    ulong ReadUInt64();
+    ulong ReadUInt64(int bits);
     void Seek(int bytePostion);
     void SeekBits(int bitPosition);
     void AdvanceBits(int bits);

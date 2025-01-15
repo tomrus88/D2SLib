@@ -1,5 +1,5 @@
 ﻿using D2SLib.IO;
-using Microsoft.Toolkit.HighPerformance.Buffers;
+using CommunityToolkit.HighPerformance.Buffers;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
@@ -14,14 +14,15 @@ public sealed class D2S : IDisposable
         Name = reader.ReadString(16);
         Status = Status.Read(reader.ReadByte());
         Progression = reader.ReadByte();
-        Unk0x0026 = reader.ReadBytes(2);
+        Unk0x0026 = reader.ReadBytes(2); // active_arms
         ClassId = reader.ReadByte();
-        Unk0x0029 = reader.ReadBytes(2);
+        Unk0x0029 = reader.ReadBytes(2); // Stats, Skills
         Level = reader.ReadByte();
         Created = reader.ReadUInt32();
         LastPlayed = reader.ReadUInt32();
-        Unk0x0034 = reader.ReadBytes(4);
-        AssignedSkills = Enumerable.Range(0, 16).Select(_ => Skill.Read(reader)).ToArray();
+        PlayTime = reader.ReadUInt32();
+        AssignedSkills = new Skill[16];
+        for (int i = 0; i < AssignedSkills.Length; i++) AssignedSkills[i] = Skill.Read(reader);
         LeftSkill = Skill.Read(reader);
         RightSkill = Skill.Read(reader);
         LeftSwapSkill = Skill.Read(reader);
@@ -29,9 +30,8 @@ public sealed class D2S : IDisposable
         Appearances = Appearances.Read(reader);
         Location = Locations.Read(reader);
         MapId = reader.ReadUInt32();
-        Unk0x00af = reader.ReadBytes(2);
         Mercenary = Mercenary.Read(reader);
-        RealmData = reader.ReadBytes(140);
+        PreviewData = PreviewData.Read(reader);
         Quests = QuestsSection.Read(reader);
         Waypoints = WaypointsSection.Read(reader);
         NPCDialog = NPCDialogSection.Read(reader);
@@ -57,7 +57,6 @@ public sealed class D2S : IDisposable
     //0x0024
     public Status Status { get; set; }
     //0x0025
-    [JsonIgnore]
     public byte Progression { get; set; }
     //0x0026 [unk = 0x0, 0x0]
     [JsonIgnore]
@@ -74,8 +73,7 @@ public sealed class D2S : IDisposable
     //0x0030
     public uint LastPlayed { get; set; }
     //0x0034 [unk = 0xff, 0xff, 0xff, 0xff]
-    [JsonIgnore]
-    public byte[]? Unk0x0034 { get; set; }
+    public uint PlayTime { get; set; }
     //0x0038
     public Skill[] AssignedSkills { get; set; }
     //0x0078
@@ -92,15 +90,11 @@ public sealed class D2S : IDisposable
     public Locations Location { get; set; }
     //0x00ab
     public uint MapId { get; set; }
-    //0x00af [unk = 0x0, 0x0]
-    [JsonIgnore]
-    public byte[]? Unk0x00af { get; set; }
     //0x00b1
     public Mercenary Mercenary { get; set; }
-    //0x00bf [unk = 0x0] (server related data)
-    [JsonIgnore]
-    public byte[]? RealmData { get; set; }
-    //0x014b
+    //0x00bf
+    public PreviewData PreviewData { get; set; }
+    //0x014f
     public QuestsSection Quests { get; set; }
     //0x0279
     public WaypointsSection Waypoints { get; set; }
@@ -131,8 +125,7 @@ public sealed class D2S : IDisposable
         writer.WriteByte(Level);
         writer.WriteUInt32(Created);
         writer.WriteUInt32(LastPlayed);
-        //Unk0x0034
-        writer.WriteBytes(Unk0x0034 ?? stackalloc byte[] { 0xff, 0xff, 0xff, 0xff });
+        writer.WriteUInt32(PlayTime);
         for (int i = 0; i < 16; i++)
         {
             AssignedSkills[i].Write(writer);
@@ -144,11 +137,8 @@ public sealed class D2S : IDisposable
         Appearances.Write(writer);
         Location.Write(writer);
         writer.WriteUInt32(MapId);
-        //0x00af [unk = 0x0, 0x0]
-        writer.WriteBytes(Unk0x00af ?? new byte[2]);
         Mercenary.Write(writer);
-        //0x00bf [unk = 0x0] (server related data)
-        writer.WriteBytes(RealmData ?? new byte[140]);
+        PreviewData.Write(writer);
         Quests.Write(writer);
         Waypoints.Write(writer);
         NPCDialog.Write(writer);

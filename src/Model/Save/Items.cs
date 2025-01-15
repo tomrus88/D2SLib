@@ -44,6 +44,39 @@ public enum ItemQuality : byte
     Tempered
 }
 
+[Flags]
+public enum ItemFlags : uint
+{
+    NewItem = 0x00000001,
+    Target = 0x00000002,
+    Targeting = 0x00000004,
+    Deleted = 0x00000008,
+    Identified = 0x00000010,
+    Quantity = 0x00000020,
+    SwitchIn = 0x00000040,
+    SwitchOut = 0x00000080,
+    Broken = 0x00000100,
+    Repaired = 0x00000200,
+    Unk1 = 0x00000400,
+    Socketed = 0x00000800,
+    NoSell = 0x00001000,
+    InStore = 0x00002000,
+    NoEquip = 0x00004000,
+    Named = 0x00008000,
+    IsEar = 0x00010000,
+    Startitem = 0x00020000,
+    Unk2 = 0x00040000,
+    Init = 0x00080000,
+    Unk3 = 0x00100000,
+    CompactSave = 0x00200000,
+    Ethereal = 0x00400000,
+    JustSaved = 0x00800000,
+    Personalized = 0x01000000,
+    LowQuality = 0x02000000,
+    Runeword = 0x04000000,
+    Item = 0x08000000
+}
+
 public sealed class ItemList : IDisposable
 {
     private ItemList(ushort header, ushort count)
@@ -157,15 +190,34 @@ public sealed class Item : IDisposable
     public ushort Quantity { get; set; }
     public byte SetItemMask { get; set; }
     public List<ItemStatList> StatLists { get; } = new List<ItemStatList>();
+    public bool IsNewItem { get => _flags[0]; set => _flags[0] = value; }
+    public bool IsTarget { get => _flags[1]; set => _flags[1] = value; }
+    public bool IsTargeting { get => _flags[2]; set => _flags[2] = value; }
+    public bool IsDeleted { get => _flags[3]; set => _flags[3] = value; }
     public bool IsIdentified { get => _flags[4]; set => _flags[4] = value; }
+    public bool IsQuantity { get => _flags[5]; set => _flags[5] = value; }
+    public bool IsSwitchIn { get => _flags[6]; set => _flags[6] = value; }
+    public bool IsSwitchOut { get => _flags[7]; set => _flags[7] = value; }
+    public bool IsBroken { get => _flags[8]; set => _flags[8] = value; }
+    public bool IsRepaired { get => _flags[9]; set => _flags[9] = value; }
+    public bool IsUnk1 { get => _flags[10]; set => _flags[10] = value; }
     public bool IsSocketed { get => _flags[11]; set => _flags[11] = value; }
+    public bool IsNoSell { get => _flags[12]; set => _flags[12] = value; }
     public bool IsNew { get => _flags[13]; set => _flags[13] = value; }
+    public bool IsNoEquip { get => _flags[14]; set => _flags[14] = value; }
+    public bool IsNamed { get => _flags[15]; set => _flags[15] = value; }
     public bool IsEar { get => _flags[16]; set => _flags[16] = value; }
     public bool IsStarterItem { get => _flags[17]; set => _flags[17] = value; }
+    public bool IsUnk2 { get => _flags[18]; set => _flags[18] = value; }
+    public bool IsInit { get => _flags[19]; set => _flags[19] = value; }
+    public bool IsStartItem { get => _flags[20]; set => _flags[20] = value; }
     public bool IsCompact { get => _flags[21]; set => _flags[21] = value; }
     public bool IsEthereal { get => _flags[22]; set => _flags[22] = value; }
+    public bool IsJustSaved { get => _flags[23]; set => _flags[23] = value; }
     public bool IsPersonalized { get => _flags[24]; set => _flags[24] = value; }
+    public bool IsLowQuality { get => _flags[25]; set => _flags[25] = value; }
     public bool IsRuneword { get => _flags[26]; set => _flags[26] = value; }
+    public bool IsItem { get => _flags[27]; set => _flags[27] = value; }
 
     public void Write(IBitWriter writer, uint version)
     {

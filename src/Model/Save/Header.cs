@@ -59,12 +59,12 @@ public class Header
     {
         Span<byte> length = stackalloc byte[sizeof(uint)];
         BinaryPrimitives.WriteUInt32LittleEndian(length, (uint)bytes.Length);
-        length.CopyTo(bytes[0x8..]);
+        length.CopyTo(bytes[0x8..0xC]);
     }
 
     public static void FixChecksum(Span<byte> bytes)
     {
-        bytes[0xc..].Clear();
+        bytes[0xC..0x10].Clear();
         int checksum = 0;
         for (int i = 0; i < bytes.Length; i++)
         {

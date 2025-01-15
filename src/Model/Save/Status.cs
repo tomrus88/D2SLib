@@ -13,10 +13,14 @@ public sealed class Status : IDisposable
 
     [JsonIgnore]
     public IList<bool> Flags => _flags;
+    public bool IsNewbie { get => Flags[0]; set => Flags[0] = value; }
+    public bool IsError { get => Flags[1]; set => Flags[1] = value; }
     public bool IsHardcore { get => Flags[2]; set => Flags[2] = value; }
     public bool IsDead { get => Flags[3]; set => Flags[3] = value; }
+    public bool IsSaveProcess { get => Flags[4]; set => Flags[4] = value; }
     public bool IsExpansion { get => Flags[5]; set => Flags[5] = value; }
     public bool IsLadder { get => Flags[6]; set => Flags[6] = value; }
+    public bool IsNeedsRenaming { get => Flags[7]; set => Flags[7] = value; }
 
     public void Write(IBitWriter writer)
     {

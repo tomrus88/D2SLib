@@ -105,7 +105,7 @@ public sealed class WaypointsDifficulty : IDisposable
         int endPos = writer.Position;
 
         writer.Align();
-        Span<byte> padding = stackalloc byte[13];
+        Span<byte> padding = stackalloc byte[17];
         padding.Clear();
         writer.WriteBytes(padding);
     }
@@ -146,15 +146,15 @@ public sealed class ActIWaypoints : IDisposable
     private InternalBitArray _flags;
     private ActIWaypoints(InternalBitArray flags) => _flags = flags;
 
-    public bool RogueEncampement { get => _flags[0]; set => _flags[0] = value; }
-    public bool ColdPlains { get => _flags[1]; set => _flags[1] = value; }
-    public bool StonyField { get => _flags[2]; set => _flags[2] = value; }
-    public bool DarkWoods { get => _flags[3]; set => _flags[3] = value; }
-    public bool BlackMarsh { get => _flags[4]; set => _flags[4] = value; }
-    public bool OuterCloister { get => _flags[5]; set => _flags[5] = value; }
-    public bool JailLvl1 { get => _flags[6]; set => _flags[6] = value; }
-    public bool InnerCloister { get => _flags[7]; set => _flags[7] = value; }
-    public bool CatacombsLvl2 { get => _flags[8]; set => _flags[8] = value; }
+    public bool RogueEncampement { get; set ; } = true;
+    public bool ColdPlains { get => _flags[0]; set => _flags[0] = value; }
+    public bool StonyField { get => _flags[1]; set => _flags[1] = value; }
+    public bool DarkWoods { get => _flags[2]; set => _flags[2] = value; }
+    public bool BlackMarsh { get => _flags[3]; set => _flags[3] = value; }
+    public bool OuterCloister { get => _flags[4]; set => _flags[4] = value; }
+    public bool JailLvl1 { get => _flags[5]; set => _flags[5] = value; }
+    public bool InnerCloister { get => _flags[6]; set => _flags[6] = value; }
+    public bool CatacombsLvl2 { get => _flags[7]; set => _flags[7] = value; }
 
     public void Write(IBitWriter writer)
     {
@@ -166,8 +166,8 @@ public sealed class ActIWaypoints : IDisposable
 
     public static ActIWaypoints Read(IBitReader reader)
     {
-        Span<byte> bytes = stackalloc byte[2];
-        reader.ReadBits(9, bytes);
+        Span<byte> bytes = stackalloc byte[1];
+        reader.ReadBits(8, bytes);
         var bits = new InternalBitArray(bytes);
         return new ActIWaypoints(bits);
     }
@@ -180,15 +180,15 @@ public sealed class ActIIWaypoints : IDisposable
     private InternalBitArray _flags;
     private ActIIWaypoints(InternalBitArray flags) => _flags = flags;
 
-    public bool LutGholein { get => _flags[0]; set => _flags[0] = value; }
-    public bool SewersLvl2 { get => _flags[1]; set => _flags[1] = value; }
-    public bool DryHills { get => _flags[2]; set => _flags[2] = value; }
-    public bool HallsOfTheDeadLvl2 { get => _flags[3]; set => _flags[3] = value; }
-    public bool FarOasis { get => _flags[4]; set => _flags[4] = value; }
-    public bool LostCity { get => _flags[5]; set => _flags[5] = value; }
-    public bool PalaceCellarLvl1 { get => _flags[6]; set => _flags[6] = value; }
-    public bool ArcaneSanctuary { get => _flags[7]; set => _flags[7] = value; }
-    public bool CanyonOfTheMagi { get => _flags[8]; set => _flags[8] = value; }
+    public bool LutGholein { get; set; } = true;
+    public bool SewersLvl2 { get => _flags[0]; set => _flags[0] = value; }
+    public bool DryHills { get => _flags[1]; set => _flags[1] = value; }
+    public bool HallsOfTheDeadLvl2 { get => _flags[2]; set => _flags[2] = value; }
+    public bool FarOasis { get => _flags[3]; set => _flags[3] = value; }
+    public bool LostCity { get => _flags[4]; set => _flags[4] = value; }
+    public bool PalaceCellarLvl1 { get => _flags[5]; set => _flags[5] = value; }
+    public bool ArcaneSanctuary { get => _flags[6]; set => _flags[6] = value; }
+    public bool CanyonOfTheMagi { get => _flags[7]; set => _flags[7] = value; }
 
     public void Write(IBitWriter writer)
     {
@@ -200,8 +200,8 @@ public sealed class ActIIWaypoints : IDisposable
 
     public static ActIIWaypoints Read(IBitReader reader)
     {
-        Span<byte> bytes = stackalloc byte[2];
-        reader.ReadBits(9, bytes);
+        Span<byte> bytes = stackalloc byte[1];
+        reader.ReadBits(8, bytes);
         var bits = new InternalBitArray(bytes);
         return new ActIIWaypoints(bits);
     }
@@ -214,15 +214,15 @@ public sealed class ActIIIWaypoints : IDisposable
     private InternalBitArray _flags;
     private ActIIIWaypoints(InternalBitArray flags) => _flags = flags;
 
-    public bool KurastDocks { get => _flags[0]; set => _flags[0] = value; }
-    public bool SpiderForest { get => _flags[1]; set => _flags[1] = value; }
-    public bool GreatMarsh { get => _flags[2]; set => _flags[2] = value; }
-    public bool FlayerJungle { get => _flags[3]; set => _flags[3] = value; }
-    public bool LowerKurast { get => _flags[4]; set => _flags[4] = value; }
-    public bool KurastBazaar { get => _flags[5]; set => _flags[5] = value; }
-    public bool UpperKurast { get => _flags[6]; set => _flags[6] = value; }
-    public bool Travincal { get => _flags[7]; set => _flags[7] = value; }
-    public bool DuranceOfHateLvl2 { get => _flags[8]; set => _flags[8] = value; }
+    public bool KurastDocks { get; set; } = true;
+    public bool SpiderForest { get => _flags[0]; set => _flags[0] = value; }
+    public bool GreatMarsh { get => _flags[1]; set => _flags[1] = value; }
+    public bool FlayerJungle { get => _flags[2]; set => _flags[2] = value; }
+    public bool LowerKurast { get => _flags[3]; set => _flags[3] = value; }
+    public bool KurastBazaar { get => _flags[4]; set => _flags[4] = value; }
+    public bool UpperKurast { get => _flags[5]; set => _flags[5] = value; }
+    public bool Travincal { get => _flags[6]; set => _flags[6] = value; }
+    public bool DuranceOfHateLvl2 { get => _flags[7]; set => _flags[7] = value; }
 
     public void Write(IBitWriter writer)
     {
@@ -234,8 +234,8 @@ public sealed class ActIIIWaypoints : IDisposable
 
     public static ActIIIWaypoints Read(IBitReader reader)
     {
-        Span<byte> bytes = stackalloc byte[2];
-        reader.ReadBits(9, bytes);
+        Span<byte> bytes = stackalloc byte[1];
+        reader.ReadBits(8, bytes);
         var bits = new InternalBitArray(bytes);
         return new ActIIIWaypoints(bits);
     }
@@ -248,9 +248,9 @@ public sealed class ActIVWaypoints : IDisposable
     private InternalBitArray _flags;
     private ActIVWaypoints(InternalBitArray flags) => _flags = flags;
 
-    public bool ThePandemoniumFortress { get => _flags[0]; set => _flags[0] = value; }
-    public bool CityOfTheDamned { get => _flags[1]; set => _flags[1] = value; }
-    public bool RiverOfFlame { get => _flags[2]; set => _flags[2] = value; }
+    public bool ThePandemoniumFortress { get; set; } = true;
+    public bool CityOfTheDamned { get => _flags[0]; set => _flags[0] = value; }
+    public bool RiverOfFlame { get => _flags[1]; set => _flags[1] = value; }
 
     public void Write(IBitWriter writer)
     {
@@ -263,7 +263,7 @@ public sealed class ActIVWaypoints : IDisposable
     public static ActIVWaypoints Read(IBitReader reader)
     {
         Span<byte> bytes = stackalloc byte[1];
-        reader.ReadBits(3, bytes);
+        reader.ReadBits(8, bytes);
         var bits = new InternalBitArray(bytes);
         return new ActIVWaypoints(bits);
     }
@@ -276,15 +276,15 @@ public sealed class ActVWaypoints : IDisposable
     private InternalBitArray _flags;
     private ActVWaypoints(InternalBitArray flags) => _flags = flags;
 
-    public bool Harrogath { get => _flags[0]; set => _flags[0] = value; }
-    public bool FrigidHighlands { get => _flags[1]; set => _flags[1] = value; }
-    public bool ArreatPlateau { get => _flags[2]; set => _flags[2] = value; }
-    public bool CrystallinePassage { get => _flags[3]; set => _flags[3] = value; }
-    public bool HallsOfPain { get => _flags[4]; set => _flags[4] = value; }
-    public bool GlacialTrail { get => _flags[5]; set => _flags[5] = value; }
-    public bool FrozenTundra { get => _flags[6]; set => _flags[6] = value; }
-    public bool TheAncientsWay { get => _flags[7]; set => _flags[7] = value; }
-    public bool WorldstoneKeepLvl2 { get => _flags[8]; set => _flags[8] = value; }
+    public bool Harrogath { get; set; } = true;
+    public bool FrigidHighlands { get => _flags[0]; set => _flags[0] = value; }
+    public bool ArreatPlateau { get => _flags[1]; set => _flags[1] = value; }
+    public bool CrystallinePassage { get => _flags[2]; set => _flags[2] = value; }
+    public bool HallsOfPain { get => _flags[3]; set => _flags[3] = value; }
+    public bool GlacialTrail { get => _flags[4]; set => _flags[4] = value; }
+    public bool FrozenTundra { get => _flags[5]; set => _flags[5] = value; }
+    public bool TheAncientsWay { get => _flags[6]; set => _flags[6] = value; }
+    public bool WorldstoneKeepLvl2 { get => _flags[7]; set => _flags[7] = value; }
 
     public void Write(IBitWriter writer)
     {
@@ -296,8 +296,8 @@ public sealed class ActVWaypoints : IDisposable
 
     public static ActVWaypoints Read(IBitReader reader)
     {
-        Span<byte> bytes = stackalloc byte[2];
-        reader.ReadBits(9, bytes);
+        Span<byte> bytes = stackalloc byte[1];
+        reader.ReadBits(8, bytes);
         var bits = new InternalBitArray(bytes);
         return new ActVWaypoints(bits);
     }

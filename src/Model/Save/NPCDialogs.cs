@@ -23,6 +23,7 @@ public sealed class NPCDialogSection
 
         for (int i = 0; i < _difficulties.Length; i++)
         {
+            writer.SeekBits(start + (i * 0x8 * 8));
             _difficulties[i].Write(writer);
         }
 
@@ -37,14 +38,15 @@ public sealed class NPCDialogSection
             Length = reader.ReadUInt16()
         };
 
-        Span<byte> bytes = stackalloc byte[0x30];
-        reader.ReadBytes(bytes);
-        using var bits = new InternalBitArray(bytes);
+        int start = reader.Position;
 
         for (int i = 0; i < npcDialogSection._difficulties.Length; i++)
         {
-            npcDialogSection._difficulties[i] = NPCDialogDifficulty.Read(bits);
+            reader.SeekBits(start + (i * 0x8 * 8));
+            npcDialogSection._difficulties[i] = NPCDialogDifficulty.Read(reader);
         }
+
+        reader.SeekBits(start + (0x30 * 8));
 
         return npcDialogSection;
     }
@@ -68,7 +70,7 @@ public sealed class NPCDialogSection
 //8 bytes per difficulty for Intro for each Difficulty followed by 8 bytes per difficulty for Congrats for each difficulty
 public sealed class NPCDialogDifficulty
 {
-    private readonly NPCDialogData[] _dialogs = new NPCDialogData[41];
+    private readonly NPCDialogData[] _dialogs = new NPCDialogData[64];
 
     private NPCDialogDifficulty() { }
 
@@ -118,28 +120,36 @@ public sealed class NPCDialogDifficulty
 
     public void Write(IBitWriter writer)
     {
+        int position = writer.Position;
+
         for (int i = 0; i < _dialogs.Length; i++)
         {
             var data = _dialogs[i];
-            int position = writer.Position;
+
+            writer.SeekBits(position + i + 0);
             writer.WriteBit(data.Introduction);
-            writer.SeekBits(position + (0x18 * 8));
+
+            writer.SeekBits(position + i + 192);
             writer.WriteBit(data.Congratulations);
-            writer.SeekBits(position + 1);
         }
     }
 
-    internal static NPCDialogDifficulty Read(InternalBitArray bits)
+    internal static NPCDialogDifficulty Read(IBitReader reader)
     {
         var output = new NPCDialogDifficulty();
 
+        int position = reader.Position;
+
         for (int i = 0; i < output._dialogs.Length; i++)
         {
-            var data = new NPCDialogData
-            {
-                Introduction = bits[i],
-                Congratulations = bits[i + (0x18 * 8)]
-            };
+            var data = new NPCDialogData();
+
+            reader.SeekBits(position + i + 0);
+            data.Introduction = reader.ReadBit();
+
+            reader.SeekBits(position + i + 192);
+            data.Congratulations = reader.ReadBit();
+
             output._dialogs[i] = data;
         }
 

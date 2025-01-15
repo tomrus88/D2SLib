@@ -30,4 +30,6 @@ public interface IBitWriter
     void WriteUInt16(ushort value, int numberOfBits);
     void WriteUInt32(uint value);
     void WriteUInt32(uint value, int numberOfBits);
+    void WriteUInt64(ulong value);
+    void WriteUInt64(ulong value, int numberOfBits);
 }

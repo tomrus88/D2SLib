@@ -7,8 +7,6 @@ public sealed class QuestsSection : IDisposable
 {
     private readonly QuestsDifficulty[] _difficulties = new QuestsDifficulty[3];
 
-    //0x014b [unk = 0x1, 0x0, 0x0, 0x0]
-    public uint? Magic { get; set; }
     //0x014f [quests header identifier = 0x57, 0x6f, 0x6f, 0x21 "Woo!"]
     public uint? Header { get; set; }
     //0x0153 [version = 0x6, 0x0, 0x0, 0x0]
@@ -22,7 +20,6 @@ public sealed class QuestsSection : IDisposable
 
     public void Write(IBitWriter writer)
     {
-        writer.WriteUInt32(Magic ?? 0x1);
         writer.WriteUInt32(Header ?? 0x216F6F57);
         writer.WriteUInt32(Version ?? 0x6);
         writer.WriteUInt16(Length ?? 0x12A);
@@ -37,7 +34,6 @@ public sealed class QuestsSection : IDisposable
     {
         var questSection = new QuestsSection
         {
-            Magic = reader.ReadUInt32(),
             Header = reader.ReadUInt32(),
             Version = reader.ReadUInt32(),
             Length = reader.ReadUInt16()
@@ -200,7 +196,7 @@ public sealed class Quest : IDisposable
 
 public sealed class ActIQuests : IDisposable
 {
-    private readonly Quest[] _quests = new Quest[8];
+    private readonly Quest[] _quests = new Quest[7];
 
     public Quest Introduction => _quests[0];
     public Quest DenOfEvil => _quests[1];
@@ -209,7 +205,6 @@ public sealed class ActIQuests : IDisposable
     public Quest TheSearchForCain => _quests[4];
     public Quest TheForgottenTower => _quests[5];
     public Quest SistersToTheSlaughter => _quests[6];
-    public Quest Completion => _quests[7];
 
     public void Write(IBitWriter writer)
     {
@@ -242,14 +237,14 @@ public sealed class ActIIQuests : IDisposable
 {
     private readonly Quest[] _quests = new Quest[8];
 
-    public Quest Introduction => _quests[0];
-    public Quest RadamentsLair => _quests[1];
-    public Quest TheHoradricStaff => _quests[2];
-    public Quest TaintedSun => _quests[3];
-    public Quest ArcaneSanctuary => _quests[4];
-    public Quest TheSummoner => _quests[5];
-    public Quest TheSevenTombs => _quests[6];
-    public Quest Completion => _quests[7];
+    public Quest Arrival => _quests[0];
+    public Quest Introduction => _quests[1];
+    public Quest RadamentsLair => _quests[2];
+    public Quest TheHoradricStaff => _quests[3];
+    public Quest TaintedSun => _quests[4];
+    public Quest ArcaneSanctuary => _quests[5];
+    public Quest TheSummoner => _quests[6];
+    public Quest TheSevenTombs => _quests[7];
 
     public void Write(IBitWriter writer)
     {
@@ -282,14 +277,14 @@ public sealed class ActIIIQuests : IDisposable
 {
     private readonly Quest[] _quests = new Quest[8];
 
-    public Quest Introduction => _quests[0];
-    public Quest LamEsensTome => _quests[1];
-    public Quest KhalimsWill => _quests[2];
-    public Quest BladeOfTheOldReligion => _quests[3];
-    public Quest TheGoldenBird => _quests[4];
-    public Quest TheBlackenedTemple => _quests[5];
-    public Quest TheGuardian => _quests[6];
-    public Quest Completion => _quests[7];
+    public Quest Arrival => _quests[0];
+    public Quest Introduction => _quests[1];
+    public Quest LamEsensTome => _quests[2];
+    public Quest KhalimsWill => _quests[3];
+    public Quest BladeOfTheOldReligion => _quests[4];
+    public Quest TheGoldenBird => _quests[5];
+    public Quest TheBlackenedTemple => _quests[6];
+    public Quest TheGuardian => _quests[7];
 
     public void Write(IBitWriter writer)
     {
@@ -322,11 +317,11 @@ public sealed class ActIVQuests : IDisposable
 {
     private readonly Quest[] _quests = new Quest[8];
 
-    public Quest Introduction => _quests[0];
-    public Quest TheFallenAngel => _quests[1];
-    public Quest TerrorsEnd => _quests[2];
-    public Quest Hellforge => _quests[3];
-    public Quest Completion => _quests[4];
+    public Quest Arrival => _quests[0];
+    public Quest Introduction => _quests[1];
+    public Quest TheFallenAngel => _quests[2];
+    public Quest TerrorsEnd => _quests[3];
+    public Quest Hellforge => _quests[4];
 
     //3 shorts at the end of ActIV completion. presumably for extra quests never used.
     public Quest Extra1 => _quests[5];
@@ -362,26 +357,27 @@ public sealed class ActIVQuests : IDisposable
 
 public sealed class ActVQuests : IDisposable
 {
-    private readonly Quest[] _quests = new Quest[16];
+    private readonly Quest[] _quests = new Quest[17];
 
-    public Quest Introduction => _quests[0];
+    public Quest Arrival => _quests[0];
+    public Quest Introduction => _quests[1];
     //2 shorts after ActV introduction. presumably for extra quests never used.
-    public Quest Extra1 => _quests[1];
-    public Quest Extra2 => _quests[2];
-    public Quest SiegeOnHarrogath => _quests[3];
-    public Quest RescueOnMountArreat => _quests[4];
-    public Quest PrisonOfIce => _quests[5];
-    public Quest BetrayalOfHarrogath => _quests[6];
-    public Quest RiteOfPassage => _quests[7];
-    public Quest EveOfDestruction => _quests[8];
-    public Quest Completion => _quests[9];
+    public Quest Extra1 => _quests[2];
+    public Quest Extra2 => _quests[3];
+    public Quest SiegeOnHarrogath => _quests[4];
+    public Quest RescueOnMountArreat => _quests[5];
+    public Quest PrisonOfIce => _quests[6];
+    public Quest BetrayalOfHarrogath => _quests[7];
+    public Quest RiteOfPassage => _quests[8];
+    public Quest EveOfDestruction => _quests[9];
+    public Quest Completion => _quests[10];
     //6 shorts after ActV completion. presumably for extra quests never used.
-    public Quest Extra3 => _quests[10];
-    public Quest Extra4 => _quests[11];
-    public Quest Extra5 => _quests[12];
-    public Quest Extra6 => _quests[13];
-    public Quest Extra7 => _quests[14];
-    public Quest Extra8 => _quests[15];
+    public Quest Extra3 => _quests[11];
+    public Quest Extra4 => _quests[12];
+    public Quest Extra5 => _quests[13];
+    public Quest Extra6 => _quests[14];
+    public Quest Extra7 => _quests[15];
+    public Quest Extra8 => _quests[16];
 
     public void Write(IBitWriter writer)
     {

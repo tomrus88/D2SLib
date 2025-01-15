@@ -4,8 +4,7 @@ namespace D2SLib.Model.Save;
 
 public sealed class Mercenary
 {
-    //is this right?
-    public ushort IsDead { get; set; }
+    public uint Flags { get; set; }
     public uint Id { get; set; }
     public ushort NameId { get; set; }
     public ushort TypeId { get; set; }
@@ -13,7 +12,7 @@ public sealed class Mercenary
 
     public void Write(IBitWriter writer)
     {
-        writer.WriteUInt16(IsDead);
+        writer.WriteUInt32(Flags);
         writer.WriteUInt32(Id);
         writer.WriteUInt16(NameId);
         writer.WriteUInt16(TypeId);
@@ -24,7 +23,7 @@ public sealed class Mercenary
     {
         var mercenary = new Mercenary
         {
-            IsDead = reader.ReadUInt16(),
+            Flags = reader.ReadUInt32(),
             Id = reader.ReadUInt32(),
             NameId = reader.ReadUInt16(),
             TypeId = reader.ReadUInt16(),

@@ -60,10 +60,9 @@ public readonly struct Location : IEquatable<Location>
     public void Write(IBitWriter writer)
     {
         byte b = 0x0;
+
         if (Active)
-        {
-            b |= 0x7;
-        }
+            b |= 1 << 7;
 
         b |= (byte)(Act - 1);
 
