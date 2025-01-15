@@ -155,7 +155,7 @@ public sealed class Item : IDisposable
         }
     }
 
-    public string? Version { get; set; }
+    public ushort Version { get; set; }
     public ItemMode Mode { get; set; }
     public ItemLocation Location { get; set; }
     public byte X { get; set; }
@@ -304,11 +304,11 @@ public sealed class Item : IDisposable
         item.Flags = new InternalBitArray(bytes);
         if (version <= 0x60)
         {
-            item.Version = Convert.ToString(reader.ReadUInt16(10), 10);
+            item.Version = reader.ReadUInt16(10);
         }
         else if (version >= 0x61)
         {
-            item.Version = Convert.ToString(reader.ReadUInt16(3), 2);
+            item.Version = reader.ReadUInt16(3);
         }
         item.Mode = (ItemMode)reader.ReadByte(3);
         item.Location = (ItemLocation)reader.ReadByte(4);
@@ -359,12 +359,11 @@ public sealed class Item : IDisposable
         writer.WriteBits(flags);
         if (version <= 0x60)
         {
-            //todo. how do we handle 1.15 version to 1.14. maybe this should be a string
-            writer.WriteUInt16(Convert.ToUInt16(item.Version, 10), 10);
+            writer.WriteUInt16(item.Version, 10);
         }
         else if (version >= 0x61)
         {
-            writer.WriteUInt16(Convert.ToUInt16(item.Version, 2), 3);
+            writer.WriteUInt16(item.Version, 3);
         }
         writer.WriteByte((byte)item.Mode, 3);
         writer.WriteByte((byte)item.Location, 4);
