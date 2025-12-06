@@ -520,12 +520,15 @@ public sealed class Item : IDisposable
             propertyLists |= item.SetItemMask;
         }
         item.StatLists.Add(ItemStatList.Read(reader));
-        for (int i = 1; i <= 128; i <<= 1)
+
+        while (propertyLists > 0)
         {
-            if ((propertyLists & i) != 0)
+            if ((propertyLists & 0x1) != 0)
             {
                 item.StatLists.Add(ItemStatList.Read(reader));
             }
+
+            propertyLists >>= 1;
         }
     }
 
