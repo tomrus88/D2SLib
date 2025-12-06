@@ -288,8 +288,19 @@ public sealed class Item : IDisposable
     {
         var nameChars = name.AsSpan().TrimEnd('\0');
         Span<byte> bytes = stackalloc byte[30];
-        int byteCount = Encoding.UTF8.GetBytes(nameChars, bytes);
+
+        // Find max characters that fit
+        int charCount = nameChars.Length;
+        while (charCount > 0 && Encoding.UTF8.GetByteCount(nameChars[..charCount]) > bytes.Length)
+        {
+            charCount--;
+        }
+
+        var trimmedChars = nameChars[..charCount];
+
+        int byteCount = Encoding.UTF8.GetBytes(trimmedChars, bytes);
         bytes = bytes[..byteCount];
+
         for (int i = 0; i < bytes.Length; i++)
         {
             writer.WriteByte(bytes[i], 8);
@@ -479,7 +490,8 @@ public sealed class Item : IDisposable
         bool isStackable = row?["stackable"].ToBool() ?? false;
         if (isArmor)
         {
-            item.Armor = (ushort)(reader.ReadUInt16(11) - itemStatCost.GetByStat("armorclass")?["Save Add"].ToUInt16() ?? 0);
+            var armorClassStat = itemStatCost.GetByStat("armorclass");
+            item.Armor = (ushort)(reader.ReadUInt16(armorClassStat?["Save Bits"].ToInt32() ?? 0) - armorClassStat?["Save Add"].ToUInt16() ?? 0);
         }
         if (isArmor || isWeapon)
         {
@@ -508,7 +520,7 @@ public sealed class Item : IDisposable
             propertyLists |= item.SetItemMask;
         }
         item.StatLists.Add(ItemStatList.Read(reader));
-        for (int i = 1; i <= 64; i <<= 1)
+        for (int i = 1; i <= 128; i <<= 1)
         {
             if ((propertyLists & i) != 0)
             {
@@ -598,7 +610,8 @@ public sealed class Item : IDisposable
         bool isStackable = row?["stackable"].ToBool() ?? false;
         if (isArmor)
         {
-            writer.WriteUInt16((ushort)(item.Armor + itemStatCost.GetByStat("armorclass")?["Save Add"].ToUInt16() ?? 0), 11);
+            var armorClassStat = itemStatCost.GetByStat("armorclass");
+            writer.WriteUInt16((ushort)(item.Armor + armorClassStat?["Save Add"].ToUInt16() ?? 0), armorClassStat?["Save Bits"].ToInt32() ?? 0);
         }
         if (isArmor || isWeapon)
         {
