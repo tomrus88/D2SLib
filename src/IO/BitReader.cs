@@ -12,11 +12,13 @@ public sealed class BitReader : IBitReader, IDisposable
 
     private InternalBitArray _bits;
     public int Position { get; private set; }
+    public int Length { get; private set; }
 
     public BitReader(ReadOnlySpan<byte> bytes)
     {
         Position = 0;
         _bits = new InternalBitArray(bytes);
+        Length = _bits.Length;
     }
 
     public bool ReadBit() => _bits[Position++];

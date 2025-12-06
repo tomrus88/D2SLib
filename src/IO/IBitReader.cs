@@ -5,6 +5,7 @@ namespace D2SLib.IO;
 public interface IBitReader
 {
     int Position { get; }
+    int Length { get; }
 
     void Align();
     bool ReadBit();

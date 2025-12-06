@@ -43,8 +43,11 @@ public sealed class D2S : IDisposable
 
         if (Status.IsExpansion)
         {
-            MercenaryItemList = MercenaryItemList.Read(reader, Mercenary, Header.Version);
-            Golem = Golem.Read(reader, Header.Version);
+            if (reader.Position != reader.Length)
+                MercenaryItemList = MercenaryItemList.Read(reader, Mercenary, Header.Version);
+
+            if (reader.Position != reader.Length)
+                Golem = Golem.Read(reader, Header.Version);
         }
     }
 
