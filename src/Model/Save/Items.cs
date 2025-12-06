@@ -189,6 +189,7 @@ public sealed class Item : IDisposable
     public ushort Durability { get; set; }
     public ushort Quantity { get; set; }
     public byte SetItemMask { get; set; }
+    public byte QuestDifficulty { get; set; }
     public List<ItemStatList> StatLists { get; } = new List<ItemStatList>();
     public bool IsNewItem { get => _flags[0]; set => _flags[0] = value; }
     public bool IsTarget { get => _flags[1]; set => _flags[1] = value; }
@@ -346,7 +347,15 @@ public sealed class Item : IDisposable
                     item.Code += Core.MetaData.ItemsData.ItemCodeTree.DecodeChar(reader);
                 }
             }
-            item.NumberOfSocketedItems = reader.ReadByte(item.IsCompact ? 1 : 3);
+            int numSocketsBits = item.IsCompact ? 1 : 3;
+            if (Core.MetaData.ItemsData.IsQuest(item.Code))
+            {
+                var itemStatCost = Core.MetaData.ItemStatCostData;
+                var questDiffStat = itemStatCost.GetByStat("questitemdifficulty");
+                item.QuestDifficulty = reader.ReadByte(questDiffStat?["Save Bits"].ToInt32() ?? 0);
+                numSocketsBits = 1;
+            }
+            item.NumberOfSocketedItems = reader.ReadByte(numSocketsBits);
         }
     }
 
@@ -408,7 +417,15 @@ public sealed class Item : IDisposable
                     }
                 }
             }
-            writer.WriteByte(item.NumberOfSocketedItems, item.IsCompact ? 1 : 3);
+            int numSocketsBits = item.IsCompact ? 1 : 3;
+            if (Core.MetaData.ItemsData.IsQuest(item.Code))
+            {
+                var itemStatCost = Core.MetaData.ItemStatCostData;
+                var questDiffStat = itemStatCost.GetByStat("questitemdifficulty");
+                writer.WriteByte(item.QuestDifficulty, questDiffStat?["Save Bits"].ToInt32() ?? 0);
+                numSocketsBits = 1;
+            }
+            writer.WriteByte(item.NumberOfSocketedItems, numSocketsBits);
         }
     }
 

@@ -38,6 +38,8 @@ public sealed class ItemsData
 
     public bool IsMisc(string code) => MiscData[code] is not null;
 
+    public bool IsQuest(string code) => GetByCode(code)?["type"].Value == "ques";
+
     private HuffmanTree InitializeHuffmanTree()
     {
         /*
