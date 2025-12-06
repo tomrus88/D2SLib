@@ -180,6 +180,7 @@ public sealed class Item : IDisposable
     public ushort RarePrefixId { get; set; }
     public ushort RareSuffixId { get; set; }
     public uint RunewordId { get; set; }
+    public byte RunewordStatListIndex { get; set; }
     [JsonIgnore]
     public bool HasRealmData { get; set; }
     [JsonIgnore]
@@ -481,7 +482,8 @@ public sealed class Item : IDisposable
         if (item.IsRuneword)
         {
             item.RunewordId = reader.ReadUInt32(12);
-            propertyLists |= (ushort)(1 << (reader.ReadUInt16(4) + 1));
+            item.RunewordStatListIndex = reader.ReadByte(4);
+            propertyLists |= (ushort)(1 << (item.RunewordStatListIndex + 1));
         }
         if (item.IsPersonalized)
         {
@@ -544,7 +546,6 @@ public sealed class Item : IDisposable
             {
                 item.StatLists.Add(ItemStatList.Read(reader));
             }
-
             propertyLists >>= 1;
         }
     }
@@ -605,8 +606,8 @@ public sealed class Item : IDisposable
         if (item.IsRuneword)
         {
             writer.WriteUInt32(item.RunewordId, 12);
-            propertyLists |= 1 << 6;
-            writer.WriteUInt16(5, 4);
+            propertyLists |= (ushort)(1 << (item.RunewordStatListIndex + 1));
+            writer.WriteByte(item.RunewordStatListIndex, 4);
         }
         if (item.IsPersonalized)
         {
@@ -660,12 +661,13 @@ public sealed class Item : IDisposable
         }
         ItemStatList.Write(writer, item.StatLists[0]);
         int idx = 1;
-        for (int i = 1; i <= 64; i <<= 1)
+        while (propertyLists > 0)
         {
-            if ((propertyLists & i) != 0)
+            if ((propertyLists & 0x1) != 0)
             {
                 ItemStatList.Write(writer, item.StatLists[idx++]);
             }
+            propertyLists >>= 1;
         }
     }
 

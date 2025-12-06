@@ -64,7 +64,7 @@ public readonly struct Location : IEquatable<Location>
         if (Active)
             b |= 1 << 7;
 
-        b |= (byte)(Act - 1);
+        b |= (byte)((Act - 1) & 0x7);
 
         writer.WriteByte(b);
     }
@@ -73,8 +73,8 @@ public readonly struct Location : IEquatable<Location>
     {
         byte b = reader.ReadByte();
         return new Location(
-            active: (b >> 7) == 1,
-            act: (byte)((b & 0x5) + 1)
+            active: (b & 0x80) != 0,
+            act: (byte)((b & 0x7) + 1)
         );
     }
 
