@@ -272,29 +272,29 @@ public sealed class Item : IDisposable
 
     private static string ReadPlayerName(IBitReader reader)
     {
-        Span<char> name = stackalloc char[15];
+        Span<byte> name = stackalloc byte[31];
         for (int i = 0; i < name.Length; i++)
         {
-            name[i] = (char)reader.ReadByte(7);
-            if (name[i] == '\0')
+            name[i] = reader.ReadByte(8);
+            if (name[i] == 0)
             {
                 break;
             }
         }
-        return new string(name);
+        return Encoding.UTF8.GetString(name.TrimEnd((byte)0));
     }
 
     private static void WritePlayerName(IBitWriter writer, string name)
     {
         var nameChars = name.AsSpan().TrimEnd('\0');
-        Span<byte> bytes = stackalloc byte[nameChars.Length];
-        int byteCount = Encoding.ASCII.GetBytes(nameChars, bytes);
+        Span<byte> bytes = stackalloc byte[30];
+        int byteCount = Encoding.UTF8.GetBytes(nameChars, bytes);
         bytes = bytes[..byteCount];
         for (int i = 0; i < bytes.Length; i++)
         {
-            writer.WriteByte(bytes[i], 7);
+            writer.WriteByte(bytes[i], 8);
         }
-        writer.WriteByte((byte)'\0', 7);
+        writer.WriteByte((byte)0, 8);
     }
 
     private static void ReadCompact(IBitReader reader, Item item, uint version)
@@ -467,8 +467,10 @@ public sealed class Item : IDisposable
         item.HasRealmData = reader.ReadBit();
         if (item.HasRealmData)
         {
-            //reader.ReadBits(96);
-            reader.AdvanceBits(96);
+            for (int i = 0; i < item.RealmData.Length; i++)
+            {
+                item.RealmData[i] = reader.ReadUInt32();
+            }
         }
         var itemStatCost = Core.MetaData.ItemStatCostData;
         var row = Core.MetaData.ItemsData.GetByCode(item.Code);
@@ -477,18 +479,18 @@ public sealed class Item : IDisposable
         bool isStackable = row?["stackable"].ToBool() ?? false;
         if (isArmor)
         {
-            item.Armor = (ushort)(reader.ReadUInt16(11) + itemStatCost.GetByStat("armorclass")?["Save Add"].ToUInt16() ?? 0);
+            item.Armor = (ushort)(reader.ReadUInt16(11) - itemStatCost.GetByStat("armorclass")?["Save Add"].ToUInt16() ?? 0);
         }
         if (isArmor || isWeapon)
         {
             var maxDurabilityStat = itemStatCost.GetByStat("maxdurability");
-            var durabilityStat = itemStatCost.GetByStat("maxdurability");
-            item.MaxDurability = (ushort)(reader.ReadUInt16(maxDurabilityStat?["Save Bits"].ToInt32() ?? 0) + maxDurabilityStat?["Save Add"].ToUInt16() ?? 0);
+            var durabilityStat = itemStatCost.GetByStat("durability");
+            item.MaxDurability = (ushort)(reader.ReadUInt16(maxDurabilityStat?["Save Bits"].ToInt32() ?? 0) - maxDurabilityStat?["Save Add"].ToUInt16() ?? 0);
             if (item.MaxDurability > 0)
             {
-                item.Durability = (ushort)(reader.ReadUInt16(durabilityStat?["Save Bits"].ToInt32() ?? 0) + durabilityStat?["Save Add"].ToUInt16() ?? 0);
+                item.Durability = (ushort)(reader.ReadUInt16(durabilityStat?["Save Bits"].ToInt32() ?? 0) - durabilityStat?["Save Add"].ToUInt16() ?? 0);
                 //what is this?
-                reader.ReadBit();
+                //reader.ReadBit();
             }
         }
         if (isStackable)
@@ -586,7 +588,8 @@ public sealed class Item : IDisposable
         writer.WriteBit(item.HasRealmData);
         if (item.HasRealmData)
         {
-            //todo 96 bits
+            for(int i = 0; i < item.RealmData.Length; i++)
+                writer.WriteUInt32(item.RealmData[i]);
         }
         var itemStatCost = Core.MetaData.ItemStatCostData;
         var row = Core.MetaData.ItemsData.GetByCode(item.Code);
@@ -595,18 +598,18 @@ public sealed class Item : IDisposable
         bool isStackable = row?["stackable"].ToBool() ?? false;
         if (isArmor)
         {
-            writer.WriteUInt16((ushort)(item.Armor - itemStatCost.GetByStat("armorclass")?["Save Add"].ToUInt16() ?? 0), 11);
+            writer.WriteUInt16((ushort)(item.Armor + itemStatCost.GetByStat("armorclass")?["Save Add"].ToUInt16() ?? 0), 11);
         }
         if (isArmor || isWeapon)
         {
             var maxDurabilityStat = itemStatCost.GetByStat("maxdurability");
-            var durabilityStat = itemStatCost.GetByStat("maxdurability");
-            writer.WriteUInt16((ushort)(item.MaxDurability - maxDurabilityStat?["Save Add"].ToUInt16() ?? 0), maxDurabilityStat?["Save Bits"].ToInt32() ?? 0);
+            var durabilityStat = itemStatCost.GetByStat("durability");
+            writer.WriteUInt16((ushort)(item.MaxDurability + maxDurabilityStat?["Save Add"].ToUInt16() ?? 0), maxDurabilityStat?["Save Bits"].ToInt32() ?? 0);
             if (item.MaxDurability > 0)
             {
-                writer.WriteUInt16((ushort)(item.Durability - durabilityStat?["Save Add"].ToUInt16() ?? 0), durabilityStat?["Save Bits"].ToInt32() ?? 0);
+                writer.WriteUInt16((ushort)(item.Durability + durabilityStat?["Save Add"].ToUInt16() ?? 0), durabilityStat?["Save Bits"].ToInt32() ?? 0);
                 ////what is this?
-                writer.WriteBit(false);
+                //writer.WriteBit(false);
             }
         }
         if (isStackable)
