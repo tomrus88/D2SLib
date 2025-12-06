@@ -41,11 +41,15 @@ public sealed class D2S : IDisposable
         PlayerItemList = ItemList.Read(reader, Header.Version);
         PlayerCorpses = CorpseList.Read(reader, Header.Version);
 
+        // this expansion check is likely correct, but not for my use case
+        //if (Status.IsExpansion)
+        //{
         if (reader.Position != reader.Length)
             MercenaryItemList = MercenaryItemList.Read(reader, Mercenary, Header.Version);
 
         if (reader.Position != reader.Length)
             Golem = Golem.Read(reader, Header.Version);
+        //}
     }
 
     //0x0000
