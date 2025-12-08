@@ -129,57 +129,51 @@ public sealed class QuestsDifficulty : IDisposable
     }
 }
 
+[Flags]
+public enum QuestFlags : ushort
+{
+    None = 0,
+    RewardGranted = 0x1,
+    RewardPending = 0x2,
+    Started = 0x4,
+    LeftTown = 0x8,
+    EnterArea = 0x10,
+    Custom1 = 0x20,
+    Custom2 = 0x40,
+    Custom3 = 0x80,
+    Custom4 = 0x100,
+    Custom5 = 0x200,
+    Custom6 = 0x400,
+    Custom7 = 0x800,
+    QuestLog = 0x1000,
+    PrimaryGoalAchieved = 0x2000,
+    CompletedNow = 0x4000,
+    CompletedBefore = 0x8000,
+}
 
 public sealed class Quest : IDisposable
 {
-    private InternalBitArray _flags;
+    private ushort _flags;
 
-    private Quest(InternalBitArray flags) => _flags = flags;
+    public QuestFlags Flags { get => (QuestFlags)_flags; set => _flags = (ushort)value; }
 
-    public bool RewardGranted { get => _flags[0]; set => _flags[0] = value; }
-    public bool RewardPending { get => _flags[1]; set => _flags[1] = value; }
-    public bool Started { get => _flags[2]; set => _flags[2] = value; }
-    public bool LeftTown { get => _flags[3]; set => _flags[3] = value; }
-    public bool EnterArea { get => _flags[4]; set => _flags[4] = value; }
-    public bool Custom1 { get => _flags[5]; set => _flags[5] = value; }
-    public bool Custom2 { get => _flags[6]; set => _flags[6] = value; }
-    public bool Custom3 { get => _flags[7]; set => _flags[7] = value; }
-    public bool Custom4 { get => _flags[8]; set => _flags[8] = value; }
-    public bool Custom5 { get => _flags[9]; set => _flags[9] = value; }
-    public bool Custom6 { get => _flags[10]; set => _flags[10] = value; }
-    public bool Custom7 { get => _flags[11]; set => _flags[11] = value; }
-    public bool QuestLog { get => _flags[12]; set => _flags[12] = value; }
-    public bool PrimaryGoalAchieved { get => _flags[13]; set => _flags[13] = value; }
-    public bool CompletedNow { get => _flags[14]; set => _flags[14] = value; }
-    public bool CompletedBefore { get => _flags[15]; set => _flags[15] = value; }
+    private Quest(ushort flags) => _flags = flags;
 
     public void Write(IBitWriter writer)
     {
-        ushort flags = 0x0;
-        ushort i = 1;
-        foreach (var flag in _flags)
-        {
-            if (flag)
-            {
-                flags |= i;
-            }
-            i <<= 1;
-        }
-        writer.WriteUInt16(flags);
+        writer.WriteUInt16(_flags);
     }
 
     public static Quest Read(IBitReader reader)
     {
-        Span<byte> bytes = stackalloc byte[2];
-        reader.ReadBytes(bytes);
-        var bits = new InternalBitArray(bytes);
+        ushort bits = reader.ReadUInt16(16);
         return new Quest(bits);
     }
 
     [Obsolete("Try the direct-read overload!")]
     public static Quest Read(ReadOnlySpan<byte> bytes)
     {
-        var bits = new InternalBitArray(bytes);
+        ushort bits = BitConverter.ToUInt16(bytes);
         return new Quest(bits);
     }
 
@@ -191,7 +185,7 @@ public sealed class Quest : IDisposable
         return writer.ToArray();
     }
 
-    public void Dispose() => Interlocked.Exchange(ref _flags!, null)?.Dispose();
+    public void Dispose() { }
 }
 
 public sealed class ActIQuests : IDisposable
