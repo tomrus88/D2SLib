@@ -133,28 +133,9 @@ public sealed class ItemList : IDisposable
 
 public sealed class Item : IDisposable
 {
-    private InternalBitArray _flags = new(4);
-
     public ushort? Header { get; set; }
 
-    [JsonIgnore]
-    public IList<bool> Flags
-    {
-        get => _flags;
-        set
-        {
-            if (value is InternalBitArray flags)
-            {
-                _flags?.Dispose();
-                _flags = flags;
-            }
-            else
-            {
-                throw new ArgumentException("Flags were not of expected type.");
-            }
-        }
-    }
-
+    public ItemFlags Flags { get; set; }
     public ushort Version { get; set; }
     public ItemMode Mode { get; set; }
     public ItemLocation Location { get; set; }
@@ -167,7 +148,7 @@ public sealed class Item : IDisposable
     public byte NumberOfSocketedItems { get; set; }
     public byte TotalNumberOfSockets { get; set; }
     public List<Item> SocketedItems { get; set; } = new();
-    public uint Id { get; set; }
+    public uint InitSeed { get; set; }
     public byte ItemLevel { get; set; }
     public ItemQuality Quality { get; set; }
     public bool HasMultipleGraphics { get; set; }
@@ -192,34 +173,6 @@ public sealed class Item : IDisposable
     public byte SetItemMask { get; set; }
     public byte QuestDifficulty { get; set; }
     public List<ItemStatList> StatLists { get; } = new List<ItemStatList>();
-    public bool IsNewItem { get => _flags[0]; set => _flags[0] = value; }
-    public bool IsTarget { get => _flags[1]; set => _flags[1] = value; }
-    public bool IsTargeting { get => _flags[2]; set => _flags[2] = value; }
-    public bool IsDeleted { get => _flags[3]; set => _flags[3] = value; }
-    public bool IsIdentified { get => _flags[4]; set => _flags[4] = value; }
-    public bool IsQuantity { get => _flags[5]; set => _flags[5] = value; }
-    public bool IsSwitchIn { get => _flags[6]; set => _flags[6] = value; }
-    public bool IsSwitchOut { get => _flags[7]; set => _flags[7] = value; }
-    public bool IsBroken { get => _flags[8]; set => _flags[8] = value; }
-    public bool IsRepaired { get => _flags[9]; set => _flags[9] = value; }
-    public bool IsUnk1 { get => _flags[10]; set => _flags[10] = value; }
-    public bool IsSocketed { get => _flags[11]; set => _flags[11] = value; }
-    public bool IsNoSell { get => _flags[12]; set => _flags[12] = value; }
-    public bool IsNew { get => _flags[13]; set => _flags[13] = value; }
-    public bool IsNoEquip { get => _flags[14]; set => _flags[14] = value; }
-    public bool IsNamed { get => _flags[15]; set => _flags[15] = value; }
-    public bool IsEar { get => _flags[16]; set => _flags[16] = value; }
-    public bool IsStarterItem { get => _flags[17]; set => _flags[17] = value; }
-    public bool IsUnk2 { get => _flags[18]; set => _flags[18] = value; }
-    public bool IsInit { get => _flags[19]; set => _flags[19] = value; }
-    public bool IsStartItem { get => _flags[20]; set => _flags[20] = value; }
-    public bool IsCompact { get => _flags[21]; set => _flags[21] = value; }
-    public bool IsEthereal { get => _flags[22]; set => _flags[22] = value; }
-    public bool IsJustSaved { get => _flags[23]; set => _flags[23] = value; }
-    public bool IsPersonalized { get => _flags[24]; set => _flags[24] = value; }
-    public bool IsLowQuality { get => _flags[25]; set => _flags[25] = value; }
-    public bool IsRuneword { get => _flags[26]; set => _flags[26] = value; }
-    public bool IsItem { get => _flags[27]; set => _flags[27] = value; }
 
     public void Write(IBitWriter writer, uint version)
     {
@@ -228,7 +181,7 @@ public sealed class Item : IDisposable
             writer.WriteUInt16(Header ?? 0x4D4A);
         }
         WriteCompact(writer, this, version);
-        if (!IsCompact)
+        if ((Flags & ItemFlags.CompactSave) == 0)
         {
             WriteComplete(writer, this, version);
         }
@@ -253,7 +206,7 @@ public sealed class Item : IDisposable
             item.Header = reader.ReadUInt16();
         }
         ReadCompact(reader, item, version);
-        if (!item.IsCompact)
+        if ((item.Flags & ItemFlags.CompactSave) == 0)
         {
             ReadComplete(reader, item, version);
         }
@@ -312,9 +265,7 @@ public sealed class Item : IDisposable
 
     private static void ReadCompact(IBitReader reader, Item item, uint version)
     {
-        Span<byte> bytes = stackalloc byte[4];
-        reader.ReadBytes(bytes);
-        item.Flags = new InternalBitArray(bytes);
+        item.Flags = (ItemFlags)reader.ReadUInt32();
         if (version <= 0x60)
         {
             item.Version = reader.ReadUInt16(10);
@@ -328,7 +279,7 @@ public sealed class Item : IDisposable
         item.X = reader.ReadByte(4);
         item.Y = reader.ReadByte(4);
         item.Page = reader.ReadByte(3);
-        if (item.IsEar)
+        if ((item.Flags & ItemFlags.IsEar) != 0)
         {
             item.FileIndex = reader.ReadByte(3);
             item.EarLevel = reader.ReadByte(7);
@@ -348,12 +299,16 @@ public sealed class Item : IDisposable
                     item.Code += Core.MetaData.ItemsData.ItemCodeTree.DecodeChar(reader);
                 }
             }
-            int numSocketsBits = item.IsCompact ? 1 : 3;
+            int numSocketsBits = (item.Flags & ItemFlags.CompactSave) != 0 ? 1 : 3;
             if (Core.MetaData.ItemsData.IsQuest(item.Code))
             {
                 var itemStatCost = Core.MetaData.ItemStatCostData;
                 var questDiffStat = itemStatCost.GetByStat("questitemdifficulty");
-                item.QuestDifficulty = reader.ReadByte(questDiffStat?["Save Bits"].ToInt32() ?? 0);
+                item.QuestDifficulty = (byte)((reader.ReadInt32(questDiffStat?["Save Bits"].ToInt32() ?? 0) - questDiffStat?["Save Add"].ToInt32() ?? 0) << questDiffStat?["ValShift"].ToInt32() ?? 0);
+
+                if (item.QuestDifficulty > 2)
+                    throw new Exception("item.QuestDifficulty > 2");
+
                 numSocketsBits = 1;
             }
             item.NumberOfSocketedItems = reader.ReadByte(numSocketsBits);
@@ -362,22 +317,7 @@ public sealed class Item : IDisposable
 
     private static void WriteCompact(IBitWriter writer, Item item, uint version)
     {
-        if (item.Flags is not InternalBitArray flags)
-        {
-            flags = new InternalBitArray(32)
-            {
-                [04] = item.IsIdentified,
-                [11] = item.IsSocketed,
-                [13] = item.IsNew,
-                [16] = item.IsEar,
-                [17] = item.IsStarterItem,
-                [21] = item.IsCompact,
-                [22] = item.IsEthereal,
-                [24] = item.IsPersonalized,
-                [26] = item.IsRuneword
-            };
-        }
-        writer.WriteBits(flags);
+        writer.WriteUInt32((uint)item.Flags);
         if (version <= 0x60)
         {
             writer.WriteUInt16(item.Version, 10);
@@ -391,7 +331,7 @@ public sealed class Item : IDisposable
         writer.WriteByte(item.X, 4);
         writer.WriteByte(item.Y, 4);
         writer.WriteByte(item.Page, 3);
-        if (item.IsEar)
+        if ((item.Flags & ItemFlags.IsEar) != 0)
         {
             writer.WriteUInt32(item.FileIndex, 3);
             writer.WriteByte(item.EarLevel, 7);
@@ -418,12 +358,12 @@ public sealed class Item : IDisposable
                     }
                 }
             }
-            int numSocketsBits = item.IsCompact ? 1 : 3;
+            int numSocketsBits = (item.Flags & ItemFlags.CompactSave) != 0 ? 1 : 3;
             if (Core.MetaData.ItemsData.IsQuest(item.Code))
             {
                 var itemStatCost = Core.MetaData.ItemStatCostData;
                 var questDiffStat = itemStatCost.GetByStat("questitemdifficulty");
-                writer.WriteByte(item.QuestDifficulty, questDiffStat?["Save Bits"].ToInt32() ?? 0);
+                writer.WriteInt32((item.QuestDifficulty + questDiffStat?["Save Add"].ToInt32() ?? 0) >> questDiffStat?["ValShift"].ToInt32() ?? 0, questDiffStat?["Save Bits"].ToInt32() ?? 0);
                 numSocketsBits = 1;
             }
             writer.WriteByte(item.NumberOfSocketedItems, numSocketsBits);
@@ -432,7 +372,7 @@ public sealed class Item : IDisposable
 
     private static void ReadComplete(IBitReader reader, Item item, uint version)
     {
-        item.Id = reader.ReadUInt32();
+        item.InitSeed = reader.ReadUInt32();
         item.ItemLevel = reader.ReadByte(7);
         item.Quality = (ItemQuality)reader.ReadByte(4);
         item.HasMultipleGraphics = reader.ReadBit();
@@ -447,11 +387,28 @@ public sealed class Item : IDisposable
         }
         switch (item.Quality)
         {
-            case ItemQuality.Normal:
-                break;
             case ItemQuality.Inferior:
             case ItemQuality.Superior:
                 item.FileIndex = reader.ReadUInt16(3);
+                break;
+            case ItemQuality.Normal:
+                //if (item.IsCharm) // item type 13
+                //{
+                //    item.CharmIsPrefix = reader.ReadBit();
+                //    if (item.CharmIsPrefix)
+                //        item.MagicPrefixIds[0] = reader.ReadUInt16(11);
+                //    else
+                //        item.MagicSuffixIds[0] = reader.ReadUInt16(11);
+                //}
+                //if (item.IsBodyPart && !item.IsPlayerBodypart) // item type 40 and not item type 7
+                //{
+                //    // monster id from monstats.txt
+                //    item.FileIndex = reader.ReadUInt16(10);
+                //}
+                if (Core.MetaData.ItemsData.IsScroll(item.Code) || Core.MetaData.ItemsData.IsBook(item.Code)) // item type 22 or 18
+                {
+                    item.MagicSuffixIds[0] = reader.ReadUInt16(5);
+                }
                 break;
             case ItemQuality.Magic:
                 item.MagicPrefixIds[0] = reader.ReadUInt16(11);
@@ -477,22 +434,27 @@ public sealed class Item : IDisposable
             case ItemQuality.Unique:
                 item.FileIndex = reader.ReadUInt16(12);
                 break;
+            case ItemQuality.Tempered:
+                item.RarePrefixId = reader.ReadUInt16(8);
+                item.RareSuffixId = reader.ReadUInt16(8);
+                break;
         }
         ushort propertyLists = 0;
-        if (item.IsRuneword)
+        if ((item.Flags & ItemFlags.Runeword) != 0)
         {
             item.RunewordId = reader.ReadUInt32(12);
             item.RunewordStatListIndex = reader.ReadByte(4);
             propertyLists |= (ushort)(1 << (item.RunewordStatListIndex + 1));
         }
-        if (item.IsPersonalized)
+        if ((item.Flags & ItemFlags.IsEar) != 0)
         {
+            item.FileIndex = reader.ReadByte(3);
+            item.EarLevel = reader.ReadByte(7);
             item.PlayerName = ReadPlayerName(reader);
         }
-        var trimmedCode = item.Code.AsSpan().TrimEnd();
-        if (trimmedCode.SequenceEqual("tbk") || trimmedCode.SequenceEqual("ibk"))
+        else if ((item.Flags & ItemFlags.Personalized) != 0)
         {
-            item.MagicSuffixIds[0] = reader.ReadByte(5);
+            item.PlayerName = ReadPlayerName(reader);
         }
         item.HasRealmData = reader.ReadBit();
         if (item.HasRealmData)
@@ -520,17 +482,20 @@ public sealed class Item : IDisposable
             if (item.MaxDurability > 0)
             {
                 item.Durability = (ushort)(reader.ReadUInt16(durabilityStat?["Save Bits"].ToInt32() ?? 0) - durabilityStat?["Save Add"].ToUInt16() ?? 0);
-                //what is this?
-                //reader.ReadBit();
             }
         }
         if (isStackable)
         {
+            //if (item.IsUsable)
+            //{
+            //    item.MagicSuffixIds[0] = reader.ReadUInt16(5);
+            //}
             item.Quantity = reader.ReadUInt16(9);
         }
-        if (item.IsSocketed)
+        if ((item.Flags & ItemFlags.Socketed) != 0)
         {
-            item.TotalNumberOfSockets = reader.ReadByte(4);
+            var numSocketsStat = itemStatCost.GetByStat("item_numsockets");
+            item.TotalNumberOfSockets = reader.ReadByte(numSocketsStat?["Save Bits"].ToInt32() ?? 0);
         }
         item.SetItemMask = 0;
         if (item.Quality == ItemQuality.Set)
@@ -552,7 +517,7 @@ public sealed class Item : IDisposable
 
     private static void WriteComplete(IBitWriter writer, Item item, uint version)
     {
-        writer.WriteUInt32(item.Id);
+        writer.WriteUInt32(item.InitSeed);
         writer.WriteByte(item.ItemLevel, 7);
         writer.WriteByte((byte)item.Quality, 4);
         writer.WriteBit(item.HasMultipleGraphics);
@@ -567,11 +532,28 @@ public sealed class Item : IDisposable
         }
         switch (item.Quality)
         {
-            case ItemQuality.Normal:
-                break;
             case ItemQuality.Inferior:
             case ItemQuality.Superior:
                 writer.WriteUInt32(item.FileIndex, 3);
+                break;
+            case ItemQuality.Normal:
+                //if (item.IsCharm) // item type 13
+                //{
+                //    writer.WriteBit(item.CharmIsPrefix);
+                //    if (item.CharmIsPrefix)
+                //        writer.WriteUInt16(item.MagicPrefixIds[0], 11);
+                //    else
+                //        writer.WriteUInt16(item.MagicSuffixIds[0], 11);
+                //}
+                //if (item.IsBodyPart && !item.IsPlayerBodypart) // item type 40 and not item type 7
+                //{
+                //    // monster id from monstats.txt
+                //    writer.WriteUInt16(item.FileIndex, 10);
+                //}
+                if (Core.MetaData.ItemsData.IsScroll(item.Code) || Core.MetaData.ItemsData.IsBook(item.Code)) // item type 22 or 18
+                {
+                    writer.WriteUInt16(item.MagicSuffixIds[0], 5);
+                }
                 break;
             case ItemQuality.Magic:
                 writer.WriteUInt16(item.MagicPrefixIds[0], 11);
@@ -601,22 +583,27 @@ public sealed class Item : IDisposable
             case ItemQuality.Unique:
                 writer.WriteUInt32(item.FileIndex, 12);
                 break;
+            case ItemQuality.Tempered:
+                writer.WriteUInt16(item.RarePrefixId, 8);
+                writer.WriteUInt16(item.RareSuffixId, 8);
+                break;
         }
         ushort propertyLists = 0;
-        if (item.IsRuneword)
+        if ((item.Flags & ItemFlags.Runeword) != 0)
         {
             writer.WriteUInt32(item.RunewordId, 12);
             propertyLists |= (ushort)(1 << (item.RunewordStatListIndex + 1));
             writer.WriteByte(item.RunewordStatListIndex, 4);
         }
-        if (item.IsPersonalized)
+        if ((item.Flags & ItemFlags.IsEar) != 0)
         {
+            writer.WriteUInt32(item.FileIndex, 3);
+            writer.WriteByte(item.EarLevel, 7);
             WritePlayerName(writer, item.PlayerName);
         }
-        var trimmedCode = item.Code.AsSpan().Trim();
-        if (trimmedCode.SequenceEqual("tbk") || trimmedCode.SequenceEqual("ibk"))
+        else if ((item.Flags & ItemFlags.Personalized) != 0)
         {
-            writer.WriteUInt16(item.MagicSuffixIds[0], 5);
+            WritePlayerName(writer, item.PlayerName);
         }
         writer.WriteBit(item.HasRealmData);
         if (item.HasRealmData)
@@ -642,17 +629,20 @@ public sealed class Item : IDisposable
             if (item.MaxDurability > 0)
             {
                 writer.WriteUInt16((ushort)(item.Durability + durabilityStat?["Save Add"].ToUInt16() ?? 0), durabilityStat?["Save Bits"].ToInt32() ?? 0);
-                ////what is this?
-                //writer.WriteBit(false);
             }
         }
         if (isStackable)
         {
+            //if (item.IsUsable)
+            //{
+            //    writer.WriteUInt16(item.MagicSuffixIds[0], 5);
+            //}
             writer.WriteUInt16(item.Quantity, 9);
         }
-        if (item.IsSocketed)
+        if ((item.Flags & ItemFlags.Socketed) != 0)
         {
-            writer.WriteByte(item.TotalNumberOfSockets, 4);
+            var numSocketsStat = itemStatCost.GetByStat("item_numsockets");
+            writer.WriteByte(item.TotalNumberOfSockets, numSocketsStat?["Save Bits"].ToInt32() ?? 0);
         }
         if (item.Quality == ItemQuality.Set)
         {
@@ -673,7 +663,6 @@ public sealed class Item : IDisposable
 
     public void Dispose()
     {
-        Interlocked.Exchange(ref _flags!, null)?.Dispose();
         foreach (var item in SocketedItems)
         {
             item?.Dispose();

@@ -150,11 +150,12 @@ public sealed class D2S : IDisposable
         ClassSkills.Write(writer);
         PlayerItemList.Write(writer, Header.Version);
         PlayerCorpses.Write(writer, Header.Version);
-        if (Status.IsExpansion)
-        {
-            MercenaryItemList?.Write(writer, Mercenary, Header.Version);
-            Golem?.Write(writer, Header.Version);
-        }
+        // this expansion check is likely correct, but not for my use case
+        //if (Status.IsExpansion)
+        //{
+        MercenaryItemList?.Write(writer, Mercenary, Header.Version);
+        Golem?.Write(writer, Header.Version);
+        //}
     }
 
     public static D2S Read(ReadOnlySpan<byte> bytes)
