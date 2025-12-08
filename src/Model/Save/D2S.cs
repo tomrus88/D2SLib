@@ -5,6 +5,20 @@ using System.Text.Json.Serialization;
 
 namespace D2SLib.Model.Save;
 
+[Flags]
+public enum CharacterFlags : byte
+{
+    None = 0x0,
+    Newbie = 0x1,
+    Error = 0x2,
+    Hardcore = 0x4,
+    Dead = 0x8,
+    SaveProcess = 0x10,
+    Expansion = 0x20,
+    Ladder = 0x40,
+    NeedsRenaming = 0x80
+}
+
 public sealed class D2S : IDisposable
 {
     private D2S(IBitReader reader)
@@ -12,7 +26,7 @@ public sealed class D2S : IDisposable
         Header = Header.Read(reader);
         ActiveWeapon = reader.ReadUInt32();
         Name = reader.ReadString(16);
-        Status = Status.Read(reader.ReadByte());
+        Status = (CharacterFlags)reader.ReadByte();
         Progression = reader.ReadByte();
         Unk0x0026 = reader.ReadBytes(2); // active_arms
         ClassId = reader.ReadByte();
@@ -59,7 +73,7 @@ public sealed class D2S : IDisposable
     //0x0014 sizeof(16)
     public string Name { get; set; }
     //0x0024
-    public Status Status { get; set; }
+    public CharacterFlags Status { get; set; }
     //0x0025
     public byte Progression { get; set; }
     //0x0026 [unk = 0x0, 0x0]
@@ -119,7 +133,7 @@ public sealed class D2S : IDisposable
         Header.Write(writer);
         writer.WriteUInt32(ActiveWeapon);
         writer.WriteString(Name, 16);
-        Status.Write(writer);
+        writer.WriteByte((byte)Status);
         writer.WriteByte(Progression);
         //Unk0x0026
         writer.WriteBytes(Unk0x0026 ?? new byte[2]);
@@ -187,7 +201,6 @@ public sealed class D2S : IDisposable
     public void Dispose()
     {
         Waypoints.Dispose();
-        Status.Dispose();
         Quests.Dispose();
         PlayerItemList.Dispose();
         PlayerCorpses.Dispose();
