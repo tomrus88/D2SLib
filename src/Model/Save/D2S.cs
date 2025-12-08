@@ -200,7 +200,6 @@ public sealed class D2S : IDisposable
 
     public void Dispose()
     {
-        Waypoints.Dispose();
         Quests.Dispose();
         PlayerItemList.Dispose();
         PlayerCorpses.Dispose();

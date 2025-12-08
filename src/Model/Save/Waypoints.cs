@@ -2,7 +2,7 @@
 
 namespace D2SLib.Model.Save;
 
-public sealed class WaypointsSection : IDisposable
+public sealed class WaypointsSection
 {
     private readonly WaypointsDifficulty[] _difficulties = new WaypointsDifficulty[3];
 
@@ -15,6 +15,7 @@ public sealed class WaypointsSection : IDisposable
     public WaypointsDifficulty Normal => _difficulties[0];
     public WaypointsDifficulty Nightmare => _difficulties[1];
     public WaypointsDifficulty Hell => _difficulties[2];
+    public WaypointsDifficulty[] Difficulties => _difficulties;
 
     public void Write(IBitWriter writer)
     {
@@ -59,26 +60,20 @@ public sealed class WaypointsSection : IDisposable
         waypointsSection.Write(writer);
         return writer.ToArray();
     }
-
-    public void Dispose()
-    {
-        for (int i = 0; i < _difficulties.Length; i++)
-        {
-            Interlocked.Exchange(ref _difficulties[i]!, null)?.Dispose();
-        }
-    }
 }
 
-public sealed class WaypointsDifficulty : IDisposable
+public sealed class WaypointsDifficulty
 {
+    private readonly Waypoints[] _acts = new Waypoints[5];
+
     private WaypointsDifficulty(IBitReader reader)
     {
         Header = reader.ReadUInt16();
-        ActI = ActIWaypoints.Read(reader);
-        ActII = ActIIWaypoints.Read(reader);
-        ActIII = ActIIIWaypoints.Read(reader);
-        ActIV = ActIVWaypoints.Read(reader);
-        ActV = ActVWaypoints.Read(reader);
+
+        for (int i = 0; i < _acts.Length; i++)
+        {
+            _acts[i] = Waypoints.Read(reader);
+        }
 
         reader.Align();
         reader.AdvanceBits(17 * 8);
@@ -86,22 +81,17 @@ public sealed class WaypointsDifficulty : IDisposable
 
     //[0x02, 0x01]
     public ushort? Header { get; set; }
-    public ActIWaypoints ActI { get; set; }
-    public ActIIWaypoints ActII { get; set; }
-    public ActIIIWaypoints ActIII { get; set; }
-    public ActIVWaypoints ActIV { get; set; }
-    public ActVWaypoints ActV { get; set; }
+    public Waypoints[] Acts => _acts;
 
     public void Write(IBitWriter writer)
     {
         writer.WriteUInt16(Header ?? 0x102);
 
         int startPos = writer.Position;
-        ActI.Write(writer);
-        ActII.Write(writer);
-        ActIII.Write(writer);
-        ActIV.Write(writer);
-        ActV.Write(writer);
+        for (int i = 0; i < _acts.Length; i++)
+        {
+            _acts[i].Write(writer);
+        }
         int endPos = writer.Position;
 
         writer.Align();
@@ -130,177 +120,161 @@ public sealed class WaypointsDifficulty : IDisposable
         waypointsDifficulty.Write(writer);
         return writer.ToArray();
     }
-
-    public void Dispose()
-    {
-        ActI.Dispose();
-        ActII.Dispose();
-        ActIII.Dispose();
-        ActIV.Dispose();
-        ActV.Dispose();
-    }
 }
 
-public sealed class ActIWaypoints : IDisposable
+[Flags]
+public enum WaypointFlags : byte
 {
-    private InternalBitArray _flags;
-    private ActIWaypoints(InternalBitArray flags) => _flags = flags;
+    Town = 0x0,
+    Waypoint1 = 0x1,
+    Waypoint2 = 0x2,
+    Waypoint3 = 0x4,
+    Waypoint4 = 0x8,
+    Waypoint5 = 0x10,
+    Waypoint6 = 0x20,
+    Waypoint7 = 0x40,
+    Waypoint8 = 0x80,
+    All = 0xFF
+}
 
-    public bool RogueEncampement { get; set ; } = true;
-    public bool ColdPlains { get => _flags[0]; set => _flags[0] = value; }
-    public bool StonyField { get => _flags[1]; set => _flags[1] = value; }
-    public bool DarkWoods { get => _flags[2]; set => _flags[2] = value; }
-    public bool BlackMarsh { get => _flags[3]; set => _flags[3] = value; }
-    public bool OuterCloister { get => _flags[4]; set => _flags[4] = value; }
-    public bool JailLvl1 { get => _flags[5]; set => _flags[5] = value; }
-    public bool InnerCloister { get => _flags[6]; set => _flags[6] = value; }
-    public bool CatacombsLvl2 { get => _flags[7]; set => _flags[7] = value; }
+[Flags]
+public enum ActIWaypoints : byte
+{
+    RogueEncampment = 0x0, // Always available (town)
+    ColdPlains = 0x1,
+    StonyField = 0x2,
+    DarkWoods = 0x4,
+    BlackMarsh = 0x8,
+    OuterCloister = 0x10,
+    JailLvl1 = 0x20,
+    InnerCloister = 0x40,
+    CatacombsLvl2 = 0x80,
+    All = 0xFF
+}
+
+[Flags]
+public enum ActIIWaypoints : byte
+{
+    LutGholein, // Always available (town)
+    SewersLvl2,
+    DryHills,
+    HallsOfTheDeadLvl2,
+    FarOasis,
+    LostCity,
+    PalaceCellarLvl1,
+    ArcaneSanctuary,
+    CanyonOfTheMagi,
+    All = 0xFF
+}
+
+[Flags]
+public enum ActIIIWaypoints : byte
+{
+    KurastDocks = 0x0, // Always available (town)
+    SpiderForest = 0x1,
+    GreatMarsh = 0x2,
+    FlayerJungle = 0x4,
+    LowerKurast = 0x8,
+    KurastBazaar = 0x10,
+    UpperKurast = 0x20,
+    Travincal = 0x40,
+    DuranceOfHateLvl2 = 0x80,
+    All = 0xFF
+}
+
+[Flags]
+public enum ActIVWaypoints : byte
+{
+    ThePandemoniumFortress = 0x0, // Always available (town)
+    CityOfTheDamned = 0x1,
+    RiverOfFlame = 0x2,
+    All = 0x3
+}
+
+[Flags]
+public enum ActVWaypoints : byte
+{
+    Harrogath = 0x0, // Always available (town)
+    FrigidHighlands = 0x1,
+    ArreatPlateau = 0x2,
+    CrystallinePassage = 0x4,
+    HallsOfPain = 0x8,
+    GlacialTrail = 0x10,
+    FrozenTundra = 0x20,
+    TheAncientsWay = 0x40,
+    WorldstoneKeepLvl2 = 0x80,
+    All = 0xFF
+}
+
+public struct Waypoints
+{
+    private WaypointFlags _flags;
+
+    private Waypoints(WaypointFlags flags) => _flags = flags;
+
+    public byte Value => (byte)_flags;
+
+    // Implicit conversions FROM act enums
+    public static implicit operator Waypoints(ActIWaypoints wp) => new((WaypointFlags)wp);
+    public static implicit operator Waypoints(ActIIWaypoints wp) => new((WaypointFlags)wp);
+    public static implicit operator Waypoints(ActIIIWaypoints wp) => new((WaypointFlags)wp);
+    public static implicit operator Waypoints(ActIVWaypoints wp) => new((WaypointFlags)wp);
+    public static implicit operator Waypoints(ActVWaypoints wp) => new((WaypointFlags)wp);
+    public static implicit operator Waypoints(WaypointFlags wp) => new(wp);
+    public static implicit operator Waypoints(byte wp) => new((WaypointFlags)wp);
+
+    // Implicit conversions TO
+    public static implicit operator WaypointFlags(Waypoints wp) => wp._flags;
+
+    // Bitwise operators with Waypoints
+    public static Waypoints operator &(Waypoints left, Waypoints right) =>
+        new(left._flags & right._flags);
+
+    public static Waypoints operator |(Waypoints left, Waypoints right) =>
+        new(left._flags | right._flags);
+
+    public static Waypoints operator ~(Waypoints wp) =>
+        new(~wp._flags);
+
+    // Bitwise operators with each act enum
+    public static Waypoints operator &(Waypoints left, ActIWaypoints right) =>
+        new(left._flags & (WaypointFlags)right);
+
+    public static Waypoints operator |(Waypoints left, ActIWaypoints right) =>
+        new(left._flags | (WaypointFlags)right);
+
+    public static Waypoints operator &(Waypoints left, ActIIWaypoints right) =>
+        new(left._flags & (WaypointFlags)right);
+
+    public static Waypoints operator |(Waypoints left, ActIIWaypoints right) =>
+        new(left._flags | (WaypointFlags)right);
+
+    public static Waypoints operator &(Waypoints left, ActIIIWaypoints right) =>
+        new(left._flags & (WaypointFlags)right);
+
+    public static Waypoints operator |(Waypoints left, ActIIIWaypoints right) =>
+        new(left._flags | (WaypointFlags)right);
+
+    public static Waypoints operator &(Waypoints left, ActIVWaypoints right) =>
+        new(left._flags & (WaypointFlags)right);
+
+    public static Waypoints operator |(Waypoints left, ActIVWaypoints right) =>
+        new(left._flags | (WaypointFlags)right);
+
+    public static Waypoints operator &(Waypoints left, ActVWaypoints right) =>
+        new(left._flags & (WaypointFlags)right);
+
+    public static Waypoints operator |(Waypoints left, ActVWaypoints right) =>
+        new(left._flags | (WaypointFlags)right);
 
     public void Write(IBitWriter writer)
     {
-        foreach (var flag in _flags)
-        {
-            writer.WriteBit(flag);
-        }
+        writer.WriteByte((byte)_flags);
     }
 
-    public static ActIWaypoints Read(IBitReader reader)
+    public static Waypoints Read(IBitReader reader)
     {
-        Span<byte> bytes = stackalloc byte[1];
-        reader.ReadBits(8, bytes);
-        var bits = new InternalBitArray(bytes);
-        return new ActIWaypoints(bits);
+        byte bits = reader.ReadByte();
+        return (Waypoints)bits;
     }
-
-    public void Dispose() => Interlocked.Exchange(ref _flags!, null)?.Dispose();
-}
-
-public sealed class ActIIWaypoints : IDisposable
-{
-    private InternalBitArray _flags;
-    private ActIIWaypoints(InternalBitArray flags) => _flags = flags;
-
-    public bool LutGholein { get; set; } = true;
-    public bool SewersLvl2 { get => _flags[0]; set => _flags[0] = value; }
-    public bool DryHills { get => _flags[1]; set => _flags[1] = value; }
-    public bool HallsOfTheDeadLvl2 { get => _flags[2]; set => _flags[2] = value; }
-    public bool FarOasis { get => _flags[3]; set => _flags[3] = value; }
-    public bool LostCity { get => _flags[4]; set => _flags[4] = value; }
-    public bool PalaceCellarLvl1 { get => _flags[5]; set => _flags[5] = value; }
-    public bool ArcaneSanctuary { get => _flags[6]; set => _flags[6] = value; }
-    public bool CanyonOfTheMagi { get => _flags[7]; set => _flags[7] = value; }
-
-    public void Write(IBitWriter writer)
-    {
-        foreach (var flag in _flags)
-        {
-            writer.WriteBit(flag);
-        }
-    }
-
-    public static ActIIWaypoints Read(IBitReader reader)
-    {
-        Span<byte> bytes = stackalloc byte[1];
-        reader.ReadBits(8, bytes);
-        var bits = new InternalBitArray(bytes);
-        return new ActIIWaypoints(bits);
-    }
-
-    public void Dispose() => Interlocked.Exchange(ref _flags!, null)?.Dispose();
-}
-
-public sealed class ActIIIWaypoints : IDisposable
-{
-    private InternalBitArray _flags;
-    private ActIIIWaypoints(InternalBitArray flags) => _flags = flags;
-
-    public bool KurastDocks { get; set; } = true;
-    public bool SpiderForest { get => _flags[0]; set => _flags[0] = value; }
-    public bool GreatMarsh { get => _flags[1]; set => _flags[1] = value; }
-    public bool FlayerJungle { get => _flags[2]; set => _flags[2] = value; }
-    public bool LowerKurast { get => _flags[3]; set => _flags[3] = value; }
-    public bool KurastBazaar { get => _flags[4]; set => _flags[4] = value; }
-    public bool UpperKurast { get => _flags[5]; set => _flags[5] = value; }
-    public bool Travincal { get => _flags[6]; set => _flags[6] = value; }
-    public bool DuranceOfHateLvl2 { get => _flags[7]; set => _flags[7] = value; }
-
-    public void Write(IBitWriter writer)
-    {
-        foreach (var flag in _flags)
-        {
-            writer.WriteBit(flag);
-        }
-    }
-
-    public static ActIIIWaypoints Read(IBitReader reader)
-    {
-        Span<byte> bytes = stackalloc byte[1];
-        reader.ReadBits(8, bytes);
-        var bits = new InternalBitArray(bytes);
-        return new ActIIIWaypoints(bits);
-    }
-
-    public void Dispose() => Interlocked.Exchange(ref _flags!, null)?.Dispose();
-}
-
-public sealed class ActIVWaypoints : IDisposable
-{
-    private InternalBitArray _flags;
-    private ActIVWaypoints(InternalBitArray flags) => _flags = flags;
-
-    public bool ThePandemoniumFortress { get; set; } = true;
-    public bool CityOfTheDamned { get => _flags[0]; set => _flags[0] = value; }
-    public bool RiverOfFlame { get => _flags[1]; set => _flags[1] = value; }
-
-    public void Write(IBitWriter writer)
-    {
-        foreach (var flag in _flags)
-        {
-            writer.WriteBit(flag);
-        }
-    }
-
-    public static ActIVWaypoints Read(IBitReader reader)
-    {
-        Span<byte> bytes = stackalloc byte[1];
-        reader.ReadBits(8, bytes);
-        var bits = new InternalBitArray(bytes);
-        return new ActIVWaypoints(bits);
-    }
-
-    public void Dispose() => Interlocked.Exchange(ref _flags!, null)?.Dispose();
-}
-
-public sealed class ActVWaypoints : IDisposable
-{
-    private InternalBitArray _flags;
-    private ActVWaypoints(InternalBitArray flags) => _flags = flags;
-
-    public bool Harrogath { get; set; } = true;
-    public bool FrigidHighlands { get => _flags[0]; set => _flags[0] = value; }
-    public bool ArreatPlateau { get => _flags[1]; set => _flags[1] = value; }
-    public bool CrystallinePassage { get => _flags[2]; set => _flags[2] = value; }
-    public bool HallsOfPain { get => _flags[3]; set => _flags[3] = value; }
-    public bool GlacialTrail { get => _flags[4]; set => _flags[4] = value; }
-    public bool FrozenTundra { get => _flags[5]; set => _flags[5] = value; }
-    public bool TheAncientsWay { get => _flags[6]; set => _flags[6] = value; }
-    public bool WorldstoneKeepLvl2 { get => _flags[7]; set => _flags[7] = value; }
-
-    public void Write(IBitWriter writer)
-    {
-        foreach (var flag in _flags)
-        {
-            writer.WriteBit(flag);
-        }
-    }
-
-    public static ActVWaypoints Read(IBitReader reader)
-    {
-        Span<byte> bytes = stackalloc byte[1];
-        reader.ReadBits(8, bytes);
-        var bits = new InternalBitArray(bytes);
-        return new ActVWaypoints(bits);
-    }
-
-    public void Dispose() => Interlocked.Exchange(ref _flags!, null)?.Dispose();
 }
