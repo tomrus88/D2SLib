@@ -287,18 +287,19 @@ public sealed class Item : IDisposable
         }
         else
         {
-            item.Code = string.Empty;
+            Span<byte> codeBuffer = stackalloc byte[4];
             if (version <= 0x60)
             {
-                item.Code = reader.ReadString(4);
+                reader.ReadBytes(codeBuffer);
             }
             else if (version >= 0x61)
             {
                 for (int i = 0; i < 4; i++)
                 {
-                    item.Code += Core.MetaData.ItemsData.ItemCodeTree.DecodeChar(reader);
+                    codeBuffer[i] = Core.MetaData.ItemsData.ItemCodeTree.DecodeChar(reader);
                 }
             }
+            item.Code = Encoding.ASCII.GetString(codeBuffer);
             int numSocketsBits = (item.Flags & ItemFlags.CompactSave) != 0 ? 1 : 3;
             if (Core.MetaData.ItemsData.IsQuest(item.Code))
             {
@@ -351,11 +352,8 @@ public sealed class Item : IDisposable
                 var codeTree = Core.MetaData.ItemsData.ItemCodeTree;
                 for (int i = 0; i < 4; i++)
                 {
-                    using var bits = codeTree.EncodeChar((char)code[i]);
-                    foreach (bool bit in bits)
-                    {
-                        writer.WriteBit(bit);
-                    }
+                    var (bits, length) = codeTree.GetEncodedBits((char)code[i]);
+                    writer.WriteBits(bits, length);
                 }
             }
             int numSocketsBits = (item.Flags & ItemFlags.CompactSave) != 0 ? 1 : 3;

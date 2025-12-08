@@ -25,7 +25,7 @@ public class LoadGame
     [GlobalSetup]
     public void GlobalSetup()
     {
-        _saveData = File.ReadAllBytes(@"Resources\D2S\1.15\DannyIsGreat.d2s");
+        _saveData = File.ReadAllBytes(@"Resources\D2S\D2R\Watcher.d2s");
         _saveGame = Core.ReadD2S(_saveData);
     }
 }

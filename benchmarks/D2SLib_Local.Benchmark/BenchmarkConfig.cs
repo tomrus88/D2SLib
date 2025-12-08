@@ -12,11 +12,7 @@ internal class BenchmarkConfig : ManualConfig
     public BenchmarkConfig()
     {
         AddJob(Job.Default
-            .WithRuntime(CoreRuntime.Core60)
-            .WithPlatform(Platform.X64)
-            .WithJit(Jit.RyuJit));
-        AddJob(Job.Default
-            .WithRuntime(CoreRuntime.Core31)
+            .WithRuntime(CoreRuntime.Core10_0)
             .WithPlatform(Platform.X64)
             .WithJit(Jit.RyuJit));
         AddDiagnoser(MemoryDiagnoser.Default);

@@ -173,6 +173,11 @@ public abstract class DataFile
         }
     }
 
+    public DataRow? GetRowByIndex(int row)
+    {
+        return new DataRow(this, row);
+    }
+
     public DataRow? GetByColumnAndValue(string name, ReadOnlySpan<char> value)
     {
         if (int.TryParse(value, out int parsed))

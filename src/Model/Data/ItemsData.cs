@@ -67,12 +67,35 @@ public sealed class ItemsData
 
 public sealed class ArmorData : DataFile
 {
-    public DataRow? this[string code] => GetByColumnAndValue("code", code);
+    private Dictionary<string, int> CodeToRowIndex = [];
+    private Dictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> lookup;
+
+    public DataRow? this[string code] => GetRowByCode(code);
+
+    private DataRow? GetRowByCode(string code)
+    {
+        if (lookup.TryGetValue(code.AsSpan().Trim(), out var rowIndex))
+        {
+            return GetRowByIndex(rowIndex);
+        }
+
+        return null;
+    }
 
     public static ArmorData Read(Stream data)
     {
         var armor = new ArmorData();
         armor.ReadData(data);
+
+        var rows = armor.GetRows();
+
+        foreach (var row in rows)
+        {
+            armor.CodeToRowIndex[row["code"].Value] = row["code"].RowIndex;
+        }
+
+        armor.lookup = armor.CodeToRowIndex.GetAlternateLookup<ReadOnlySpan<char>>();
+
         return armor;
     }
 
@@ -85,12 +108,35 @@ public sealed class ArmorData : DataFile
 
 public sealed class WeaponsData : DataFile
 {
-    public DataRow? this[string code] => GetByColumnAndValue("code", code);
+    private Dictionary<string, int> CodeToRowIndex = [];
+    private Dictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> lookup;
+
+    public DataRow? this[string code] => GetRowByCode(code);
+
+    private DataRow? GetRowByCode(string code)
+    {
+        if (lookup.TryGetValue(code.AsSpan().Trim(), out var rowIndex))
+        {
+            return GetRowByIndex(rowIndex);
+        }
+
+        return null;
+    }
 
     public static WeaponsData Read(Stream data)
     {
         var weapons = new WeaponsData();
         weapons.ReadData(data);
+
+        var rows = weapons.GetRows();
+
+        foreach (var row in rows)
+        {
+            weapons.CodeToRowIndex[row["code"].Value] = row["code"].RowIndex;
+        }
+
+        weapons.lookup = weapons.CodeToRowIndex.GetAlternateLookup<ReadOnlySpan<char>>();
+
         return weapons;
     }
 
@@ -103,12 +149,35 @@ public sealed class WeaponsData : DataFile
 
 public sealed class MiscData : DataFile
 {
-    public DataRow? this[string code] => GetByColumnAndValue("code", code);
+    private Dictionary<string, int> CodeToRowIndex = [];
+    private Dictionary<string, int>.AlternateLookup<ReadOnlySpan<char>> lookup;
+
+    public DataRow? this[string code] => GetRowByCode(code);
+
+    private DataRow? GetRowByCode(string code)
+    {
+        if (lookup.TryGetValue(code.AsSpan().Trim(), out var rowIndex))
+        {
+            return GetRowByIndex(rowIndex);
+        }
+
+        return null;
+    }
 
     public static MiscData Read(Stream data)
     {
         var misc = new MiscData();
         misc.ReadData(data);
+
+        var rows = misc.GetRows();
+
+        foreach (var row in rows)
+        {
+            misc.CodeToRowIndex[row["code"].Value] = row["code"].RowIndex;
+        }
+
+        misc.lookup = misc.CodeToRowIndex.GetAlternateLookup<ReadOnlySpan<char>>();
+
         return misc;
     }
 

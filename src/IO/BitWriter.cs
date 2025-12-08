@@ -184,3 +184,19 @@ public sealed class BitWriter : IBitWriter, IDisposable
     public void Align() => Position = (Position + 7) & ~7;
     public void Dispose() => Interlocked.Exchange(ref _bits!, null)?.Dispose();
 }
+
+public static class BitWriterExtensions
+{
+    /// <summary>
+    /// Writes multiple bits from a uint value (MSB first)
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void WriteBits(this IBitWriter writer, uint bits, int count)
+    {
+        // Write from MSB to LSB
+        for (int i = count - 1; i >= 0; i--)
+        {
+            writer.WriteBit(((bits >> i) & 1) == 1);
+        }
+    }
+}
