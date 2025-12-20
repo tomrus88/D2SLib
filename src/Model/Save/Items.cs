@@ -33,7 +33,8 @@ public enum ItemLocation : byte
 
 public enum ItemQuality : byte
 {
-    Inferior = 0x1,
+    None,
+    Inferior,
     Normal,
     Superior,
     Magic,
@@ -47,6 +48,7 @@ public enum ItemQuality : byte
 [Flags]
 public enum ItemFlags : uint
 {
+    None = 0,
     NewItem = 0x00000001,
     Target = 0x00000002,
     Targeting = 0x00000004,
@@ -225,12 +227,12 @@ public sealed class Item : IDisposable
         return writer.ToArray();
     }
 
-    private static string ReadPlayerName(IBitReader reader)
+    private static string ReadPlayerName(IBitReader reader, uint version)
     {
         Span<byte> name = stackalloc byte[31];
         for (int i = 0; i < name.Length; i++)
         {
-            name[i] = reader.ReadByte(8);
+            name[i] = reader.ReadByte(version > 97 ? 8 : 7);
             if (name[i] == 0)
             {
                 break;
@@ -239,7 +241,7 @@ public sealed class Item : IDisposable
         return Encoding.UTF8.GetString(name.TrimEnd((byte)0));
     }
 
-    private static void WritePlayerName(IBitWriter writer, string name)
+    private static void WritePlayerName(IBitWriter writer, string name, uint version)
     {
         var nameChars = name.AsSpan().TrimEnd('\0');
         Span<byte> bytes = stackalloc byte[30];
@@ -258,9 +260,9 @@ public sealed class Item : IDisposable
 
         for (int i = 0; i < bytes.Length; i++)
         {
-            writer.WriteByte(bytes[i], 8);
+            writer.WriteByte(bytes[i], version > 97 ? 8 : 7);
         }
-        writer.WriteByte((byte)0, 8);
+        writer.WriteByte((byte)0, version > 97 ? 8 : 7);
     }
 
     private static void ReadCompact(IBitReader reader, Item item, uint version)
@@ -283,7 +285,7 @@ public sealed class Item : IDisposable
         {
             item.FileIndex = reader.ReadByte(3);
             item.EarLevel = reader.ReadByte(7);
-            item.PlayerName = ReadPlayerName(reader);
+            item.PlayerName = ReadPlayerName(reader, version);
         }
         else
         {
@@ -336,7 +338,7 @@ public sealed class Item : IDisposable
         {
             writer.WriteUInt32(item.FileIndex, 3);
             writer.WriteByte(item.EarLevel, 7);
-            WritePlayerName(writer, item.PlayerName);
+            WritePlayerName(writer, item.PlayerName, version);
         }
         else
         {
@@ -448,11 +450,11 @@ public sealed class Item : IDisposable
         {
             item.FileIndex = reader.ReadByte(3);
             item.EarLevel = reader.ReadByte(7);
-            item.PlayerName = ReadPlayerName(reader);
+            item.PlayerName = ReadPlayerName(reader, version);
         }
         else if ((item.Flags & ItemFlags.Personalized) != 0)
         {
-            item.PlayerName = ReadPlayerName(reader);
+            item.PlayerName = ReadPlayerName(reader, version);
         }
         if (version > 86)
         {
@@ -609,11 +611,11 @@ public sealed class Item : IDisposable
         {
             writer.WriteUInt32(item.FileIndex, 3);
             writer.WriteByte(item.EarLevel, 7);
-            WritePlayerName(writer, item.PlayerName);
+            WritePlayerName(writer, item.PlayerName, version);
         }
         else if ((item.Flags & ItemFlags.Personalized) != 0)
         {
-            WritePlayerName(writer, item.PlayerName);
+            WritePlayerName(writer, item.PlayerName, version);
         }
         if (version > 86)
         {
