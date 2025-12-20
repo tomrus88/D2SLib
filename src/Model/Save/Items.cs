@@ -165,7 +165,7 @@ public sealed class Item : IDisposable
     [JsonIgnore]
     public bool HasRealmData { get; set; }
     [JsonIgnore]
-    public uint[] RealmData { get; set; } = new uint[3];
+    public uint[] RealmData { get; set; } = new uint[4];
     public ushort Armor { get; set; }
     public ushort MaxDurability { get; set; }
     public ushort Durability { get; set; }
@@ -454,12 +454,24 @@ public sealed class Item : IDisposable
         {
             item.PlayerName = ReadPlayerName(reader);
         }
-        item.HasRealmData = reader.ReadBit();
-        if (item.HasRealmData)
+        if (version > 86)
         {
-            for (int i = 0; i < item.RealmData.Length; i++)
+            item.HasRealmData = reader.ReadBit();
+            if (item.HasRealmData)
             {
-                item.RealmData[i] = reader.ReadUInt32();
+                if (version > 96)
+                {
+                    for (int i = 0; i < item.RealmData.Length; i++)
+                        item.RealmData[i] = reader.ReadUInt32();
+                }
+                else
+                {
+                    item.RealmData[2] = reader.ReadUInt32();
+                    item.RealmData[3] = reader.ReadUInt32();
+
+                    if (version > 93)
+                        reader.ReadUInt32();
+                }
             }
         }
         var itemStatCost = Core.MetaData.ItemStatCostData;
@@ -488,7 +500,7 @@ public sealed class Item : IDisposable
             //{
             //    item.MagicSuffixIds[0] = reader.ReadUInt16(5);
             //}
-            item.Quantity = reader.ReadUInt16(9);
+            item.Quantity = reader.ReadUInt16(version > 80 ? 9 : 8);
         }
         if ((item.Flags & ItemFlags.Socketed) != 0)
         {
@@ -603,11 +615,25 @@ public sealed class Item : IDisposable
         {
             WritePlayerName(writer, item.PlayerName);
         }
-        writer.WriteBit(item.HasRealmData);
-        if (item.HasRealmData)
+        if (version > 86)
         {
-            for(int i = 0; i < item.RealmData.Length; i++)
-                writer.WriteUInt32(item.RealmData[i]);
+            writer.WriteBit(item.HasRealmData);
+            if (item.HasRealmData)
+            {
+                if (version > 96)
+                {
+                    for (int i = 0; i < 4; i++)
+                        writer.WriteUInt32(item.RealmData[i]);
+                }
+                else
+                {
+                    writer.WriteUInt32(item.RealmData[2]);
+                    writer.WriteUInt32(item.RealmData[3]);
+
+                    if (version > 93)
+                        writer.WriteUInt32(0);
+                }
+            }
         }
         var itemStatCost = Core.MetaData.ItemStatCostData;
         var row = Core.MetaData.ItemsData.GetByCode(item.Code);
@@ -635,7 +661,7 @@ public sealed class Item : IDisposable
             //{
             //    writer.WriteUInt16(item.MagicSuffixIds[0], 5);
             //}
-            writer.WriteUInt16(item.Quantity, 9);
+            writer.WriteUInt16(item.Quantity, version > 80 ? 9 : 8);
         }
         if ((item.Flags & ItemFlags.Socketed) != 0)
         {
