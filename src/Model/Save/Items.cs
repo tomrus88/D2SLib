@@ -230,9 +230,10 @@ public sealed class Item : IDisposable
     private static string ReadPlayerName(IBitReader reader, uint version)
     {
         Span<byte> name = stackalloc byte[31];
+        int numBits = version > 97 ? 8 : 7;
         for (int i = 0; i < name.Length; i++)
         {
-            name[i] = reader.ReadByte(version > 97 ? 8 : 7);
+            name[i] = reader.ReadByte(numBits);
             if (name[i] == 0)
             {
                 break;
@@ -257,12 +258,12 @@ public sealed class Item : IDisposable
 
         int byteCount = Encoding.UTF8.GetBytes(trimmedChars, bytes);
         bytes = bytes[..byteCount];
-
+        int numBits = version > 97 ? 8 : 7;
         for (int i = 0; i < bytes.Length; i++)
         {
-            writer.WriteByte(bytes[i], version > 97 ? 8 : 7);
+            writer.WriteByte(bytes[i], numBits);
         }
-        writer.WriteByte((byte)0, version > 97 ? 8 : 7);
+        writer.WriteByte((byte)0, numBits);
     }
 
     private static void ReadCompact(IBitReader reader, Item item, uint version)
