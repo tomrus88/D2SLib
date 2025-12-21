@@ -2,12 +2,13 @@
 
 namespace D2SLib.Model.Save;
 
+public record Stat(int Layer, long Value);
+
 //variable size. depends on # of attributes
 public class Attributes
 {
     public ushort? Header { get; set; }
-    public Dictionary<string, int> Stats { get; } = new Dictionary<string, int>();
-    public Dictionary<string, int> Extra { get; } = new Dictionary<string, int>();
+    public Dictionary<ushort, Stat> Stats { get; } = new Dictionary<ushort, Stat>();
 
     public static Attributes Read(IBitReader reader)
     {
@@ -20,19 +21,34 @@ public class Attributes
         while (id != 0x1ff)
         {
             var property = itemStatCost.GetById(id);
-            int attribute = reader.ReadInt32(property?["CSvBits"].ToInt32() ?? 0);
-            int valShift = property?["ValShift"].ToInt32() ?? 0;
-            if (valShift > 0)
+            if (property == null)
             {
-                int mask = (1 << valShift) - 1;
-                int extra = attribute & mask;
-
-                if (extra != 0)
-                    attributes.Extra.Add(property?["Stat"].Value ?? string.Empty, extra);
-
-                attribute >>= valShift;
+                throw new Exception($"No ItemStatCost record found for id: {id} at bit {reader.Position - 9}");
             }
-            attributes.Stats.Add(property?["Stat"].Value ?? string.Empty, attribute);
+            int layer = 0;
+
+            int csvParamBits = property["CSvParam"].ToInt32();
+
+            if (csvParamBits > 0)
+            {
+                layer = reader.ReadInt32Signed(csvParamBits);
+            }
+
+            int csvBits = property["CSvBits"].ToInt32();
+            int csvSigned = property["CSvSigned"].ToInt32();
+
+            long value;
+
+            if (csvBits < 32 && csvSigned > 0)
+                value = reader.ReadInt32Signed(csvBits);
+            else
+                value = reader.ReadInt32(csvBits);
+
+            //int valShift = property["ValShift"].ToInt32();
+            //value >>= valShift;
+
+            attributes.Stats.Add(id, new Stat(layer, value));
+
             id = reader.ReadUInt16(9);
         }
         reader.Align();
@@ -45,18 +61,28 @@ public class Attributes
         writer.WriteUInt16(Header ?? 0x6667);
         foreach (var entry in Stats)
         {
-            var property = itemStatCost.GetByStat(entry.Key);
-            writer.WriteUInt16(property?["ID"].ToUInt16() ?? 0, 9);
-            int attribute = entry.Value;
-            int valShift = property?["ValShift"].ToInt32() ?? 0;
-            if (valShift > 0)
+            var property = itemStatCost.GetById(entry.Key);
+            if (property == null)
             {
-                attribute <<= valShift;
-
-                if (Extra.TryGetValue(entry.Key, out int extra))
-                    attribute |= extra;
+                throw new Exception($"No ItemStatCost record found for id: {entry.Key}");
             }
-            writer.WriteInt32(attribute, property?["CSvBits"].ToInt32() ?? 0);
+            writer.WriteUInt16(property["ID"].ToUInt16(), 9);
+
+            int csvParamBits = property["CSvParam"].ToInt32();
+
+            if (csvParamBits > 0)
+            {
+                writer.WriteInt32(entry.Value.Layer, csvParamBits);
+            }
+
+            int csvBits = property["CSvBits"].ToInt32();
+
+            long value = entry.Value.Value;
+
+            //int valShift = property["ValShift"].ToInt32();
+            //value <<= valShift;
+
+            writer.WriteUInt32((uint)value, csvBits);
         }
         writer.WriteUInt16(0x1ff, 9);
         writer.Align();

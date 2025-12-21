@@ -1,8 +1,9 @@
 ﻿using CommunityToolkit.HighPerformance.Buffers;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Text;
-using static System.Buffers.Binary.BinaryPrimitives;
 using static D2SLib.IO.InternalBitArray;
+using static System.Buffers.Binary.BinaryPrimitives;
 
 namespace D2SLib.IO;
 
@@ -155,4 +156,22 @@ public sealed class BitReader : IBitReader, IDisposable
     public void Align() => Position = (Position + 7) & ~7;
 
     public void Dispose() => Interlocked.Exchange(ref _bits!, null)?.Dispose();
+}
+
+public static class BitReaderExtensions
+{
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static int ReadInt32Signed(this IBitReader reader, int count)
+    {
+        uint raw = reader.ReadUInt32(count);
+
+        // Sign extend if the high bit is set
+        if (count < 32 && (raw & (1u << (count - 1))) != 0)
+        {
+            // Set all bits above 'count' to 1
+            raw |= ~((1u << count) - 1);
+        }
+
+        return (int)raw;
+    }
 }

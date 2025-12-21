@@ -65,6 +65,7 @@ public sealed class WaypointsSection
 public sealed class WaypointsDifficulty
 {
     private readonly Waypoints[] _acts = new Waypoints[5];
+    private static readonly int[] _numBits = [9, 9, 9, 3, 9];
 
     private WaypointsDifficulty(IBitReader reader)
     {
@@ -72,11 +73,12 @@ public sealed class WaypointsDifficulty
 
         for (int i = 0; i < _acts.Length; i++)
         {
-            _acts[i] = Waypoints.Read(reader);
+            _acts[i] = Waypoints.Read(reader, _numBits[i]);
         }
 
+        reader.ReadInt32(9);
         reader.Align();
-        reader.AdvanceBits(17 * 8);
+        reader.AdvanceBits(16 * 8);
     }
 
     //[0x02, 0x01]
@@ -87,15 +89,14 @@ public sealed class WaypointsDifficulty
     {
         writer.WriteUInt16(Header ?? 0x102);
 
-        int startPos = writer.Position;
         for (int i = 0; i < _acts.Length; i++)
         {
-            _acts[i].Write(writer);
+            _acts[i].Write(writer, _numBits[i]);
         }
-        int endPos = writer.Position;
 
+        writer.WriteInt32(0, 9);
         writer.Align();
-        Span<byte> padding = stackalloc byte[17];
+        Span<byte> padding = stackalloc byte[16];
         padding.Clear();
         writer.WriteBytes(padding);
     }
@@ -123,87 +124,93 @@ public sealed class WaypointsDifficulty
 }
 
 [Flags]
-public enum WaypointFlags : byte
+public enum WaypointFlags : ushort
 {
-    Town = 0x0,
-    Waypoint1 = 0x1,
-    Waypoint2 = 0x2,
-    Waypoint3 = 0x4,
-    Waypoint4 = 0x8,
-    Waypoint5 = 0x10,
-    Waypoint6 = 0x20,
-    Waypoint7 = 0x40,
-    Waypoint8 = 0x80,
-    All = 0xFF
+    None = 0x0,
+    Town = 0x1,
+    Waypoint1 = 0x2,
+    Waypoint2 = 0x4,
+    Waypoint3 = 0x8,
+    Waypoint4 = 0x10,
+    Waypoint5 = 0x20,
+    Waypoint6 = 0x40,
+    Waypoint7 = 0x80,
+    Waypoint8 = 0x100,
+    All = 0x1FF
 }
 
 [Flags]
-public enum ActIWaypoints : byte
+public enum ActIWaypoints : ushort
 {
-    RogueEncampment = 0x0, // Always available (town)
-    ColdPlains = 0x1,
-    StonyField = 0x2,
-    DarkWoods = 0x4,
-    BlackMarsh = 0x8,
-    OuterCloister = 0x10,
-    JailLvl1 = 0x20,
-    InnerCloister = 0x40,
-    CatacombsLvl2 = 0x80,
-    All = 0xFF
+    None = 0x0,
+    RogueEncampment = 0x1,
+    ColdPlains = 0x2,
+    StonyField = 0x4,
+    DarkWoods = 0x8,
+    BlackMarsh = 0x10,
+    OuterCloister = 0x20,
+    JailLvl1 = 0x40,
+    InnerCloister = 0x80,
+    CatacombsLvl2 = 0x100,
+    All = 0x1FF
 }
 
 [Flags]
-public enum ActIIWaypoints : byte
+public enum ActIIWaypoints : ushort
 {
-    LutGholein, // Always available (town)
-    SewersLvl2,
-    DryHills,
-    HallsOfTheDeadLvl2,
-    FarOasis,
-    LostCity,
-    PalaceCellarLvl1,
-    ArcaneSanctuary,
-    CanyonOfTheMagi,
-    All = 0xFF
+    None = 0x0,
+    LutGholein = 0x1,
+    SewersLvl2 = 0x2,
+    DryHills = 0x4,
+    HallsOfTheDeadLvl2 = 0x8,
+    FarOasis = 0x10,
+    LostCity = 0x20,
+    PalaceCellarLvl1 = 0x40,
+    ArcaneSanctuary = 0x80,
+    CanyonOfTheMagi = 0x100,
+    All = 0x1FF
 }
 
 [Flags]
-public enum ActIIIWaypoints : byte
+public enum ActIIIWaypoints : ushort
 {
-    KurastDocks = 0x0, // Always available (town)
-    SpiderForest = 0x1,
-    GreatMarsh = 0x2,
-    FlayerJungle = 0x4,
-    LowerKurast = 0x8,
-    KurastBazaar = 0x10,
-    UpperKurast = 0x20,
-    Travincal = 0x40,
-    DuranceOfHateLvl2 = 0x80,
-    All = 0xFF
+    None = 0x0,
+    KurastDocks = 0x1,
+    SpiderForest = 0x2,
+    GreatMarsh = 0x4,
+    FlayerJungle = 0x8,
+    LowerKurast = 0x10,
+    KurastBazaar = 0x20,
+    UpperKurast = 0x40,
+    Travincal = 0x80,
+    DuranceOfHateLvl2 = 0x100,
+    All = 0x1FF
 }
 
 [Flags]
-public enum ActIVWaypoints : byte
+public enum ActIVWaypoints : ushort
 {
-    ThePandemoniumFortress = 0x0, // Always available (town)
-    CityOfTheDamned = 0x1,
-    RiverOfFlame = 0x2,
-    All = 0x3
+    None = 0x0,
+    ThePandemoniumFortress = 0x1,
+    CityOfTheDamned = 0x2,
+    RiverOfFlame = 0x4,
+    All = 0x7
 }
 
 [Flags]
-public enum ActVWaypoints : byte
+public enum ActVWaypoints : ushort
 {
-    Harrogath = 0x0, // Always available (town)
-    FrigidHighlands = 0x1,
-    ArreatPlateau = 0x2,
-    CrystallinePassage = 0x4,
-    HallsOfPain = 0x8,
-    GlacialTrail = 0x10,
-    FrozenTundra = 0x20,
-    TheAncientsWay = 0x40,
-    WorldstoneKeepLvl2 = 0x80,
-    All = 0xFF
+    None = 0x0,
+    Harrogath = 0x1,
+    FrigidHighlands = 0x2,
+    ArreatPlateau = 0x4,
+    CrystallinePassage = 0x8,
+    HallsOfPain = 0x10,
+    GlacialTrail = 0x20,
+    FrozenTundra = 0x40,
+    TheAncientsWay = 0x80,
+    WorldstoneKeepLvl2 = 0x100,
+    All = 0x1FF
 }
 
 public struct Waypoints
@@ -211,8 +218,9 @@ public struct Waypoints
     private WaypointFlags _flags;
 
     private Waypoints(WaypointFlags flags) => _flags = flags;
+    private Waypoints(ushort flags) => _flags = (WaypointFlags)flags;
 
-    public byte Value => (byte)_flags;
+    public ushort Value => (ushort)_flags;
 
     // Implicit conversions FROM act enums
     public static implicit operator Waypoints(ActIWaypoints wp) => new((WaypointFlags)wp);
@@ -221,7 +229,6 @@ public struct Waypoints
     public static implicit operator Waypoints(ActIVWaypoints wp) => new((WaypointFlags)wp);
     public static implicit operator Waypoints(ActVWaypoints wp) => new((WaypointFlags)wp);
     public static implicit operator Waypoints(WaypointFlags wp) => new(wp);
-    public static implicit operator Waypoints(byte wp) => new((WaypointFlags)wp);
 
     // Implicit conversions TO
     public static implicit operator WaypointFlags(Waypoints wp) => wp._flags;
@@ -267,14 +274,14 @@ public struct Waypoints
     public static Waypoints operator |(Waypoints left, ActVWaypoints right) =>
         new(left._flags | (WaypointFlags)right);
 
-    public void Write(IBitWriter writer)
+    public void Write(IBitWriter writer, int numBits)
     {
-        writer.WriteByte((byte)_flags);
+        writer.WriteUInt16((ushort)_flags, numBits);
     }
 
-    public static Waypoints Read(IBitReader reader)
+    public static Waypoints Read(IBitReader reader, int numBits)
     {
-        byte bits = reader.ReadByte();
-        return (Waypoints)bits;
+        ushort bits = reader.ReadUInt16(numBits);
+        return new(bits);
     }
 }
