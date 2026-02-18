@@ -45,14 +45,17 @@ public class PreviewData
     public uint GuildEmblemColor { get; set; } // One byte but padded to 4
     public uint ExpansionExperience { get; set; }
     public uint ClassicExperience { get; set; }
+    public byte GameVersion { get; set; }
+    public byte Unk1 { get; set; }
+    public byte Unk2 { get; set; }
     public PreviewItem LeftHand { get; set; }
     public PreviewItem RightHand { get; set; }
     public PreviewItem Torso { get; set; }
     public PreviewItem Head { get; set; }
     public string Name { get; set; }
-    public uint Unk1 { get; set; }
+    public uint Unk3 { get; set; }
 
-    public static PreviewData Read(IBitReader reader)
+    public static PreviewData Read(IBitReader reader, uint version)
     {
         var previewData = new PreviewData
         {
@@ -61,29 +64,38 @@ public class PreviewData
             GuildEmblemColor = reader.ReadUInt32(),
             ExpansionExperience = reader.ReadUInt32(),
             ClassicExperience = reader.ReadUInt32(),
+            GameVersion = version > 100 ? reader.ReadByte() : (byte)0,
+            Unk1 = version > 100 ? reader.ReadByte() : (byte)0,
+            Unk2 = version > 100 ? reader.ReadByte() : (byte)0,
             LeftHand = PreviewItem.Read(reader),
             RightHand = PreviewItem.Read(reader),
             Torso = PreviewItem.Read(reader),
             Head = PreviewItem.Read(reader),
             Name = reader.ReadString(64),
-            Unk1 = reader.ReadUInt32(),
+            Unk3 = reader.ReadUInt32(),
         };
 
         return previewData;
     }
 
-    public void Write(IBitWriter writer)
+    public void Write(IBitWriter writer, uint version)
     {
         writer.WriteUInt64(ExpansionSaveTime);
         writer.WriteUInt64(ClassicSaveTime);
         writer.WriteUInt32(GuildEmblemColor);
         writer.WriteUInt32(ExpansionExperience);
         writer.WriteUInt32(ClassicExperience);
+        if (version > 100)
+        {
+            writer.WriteUInt32(GameVersion);
+            writer.WriteUInt32(Unk1);
+            writer.WriteUInt32(Unk2);
+        }
         LeftHand.Write(writer);
         RightHand.Write(writer);
         Torso.Write(writer);
         Head.Write(writer);
         writer.WriteString(Name, 64);
-        writer.WriteUInt32(Unk1);
+        writer.WriteUInt32(Unk3);
     }
 }

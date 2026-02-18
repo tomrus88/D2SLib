@@ -25,7 +25,10 @@ public sealed class D2S : IDisposable
     {
         Header = Header.Read(reader);
         ActiveWeapon = reader.ReadUInt32();
-        Name = reader.ReadString(16);
+        if (Header.Version < 100)
+        {
+            Name = reader.ReadString(16);
+        }
         Status = (CharacterFlags)reader.ReadByte();
         Progression = reader.ReadByte();
         Unk0x0026 = reader.ReadBytes(2); // active_arms
@@ -45,7 +48,15 @@ public sealed class D2S : IDisposable
         Location = Locations.Read(reader);
         MapId = reader.ReadUInt32();
         Mercenary = Mercenary.Read(reader);
-        PreviewData = PreviewData.Read(reader);
+
+        if (Header.Version > 100)
+            Unk_v105_1 = reader.ReadBytes(45);
+
+        PreviewData = PreviewData.Read(reader, Header.Version);
+
+        if (Header.Version > 100)
+            Unk_v105_2 = reader.ReadBytes(36);
+
         Quests = QuestsSection.Read(reader);
         Waypoints = WaypointsSection.Read(reader);
         NPCDialog = NPCDialogSection.Read(reader);
@@ -110,8 +121,10 @@ public sealed class D2S : IDisposable
     public uint MapId { get; set; }
     //0x00b1
     public Mercenary Mercenary { get; set; }
+    public byte[]? Unk_v105_1 { get; set; }
     //0x00bf
     public PreviewData PreviewData { get; set; }
+    public byte[]? Unk_v105_2 { get; set; }
     //0x014f
     public QuestsSection Quests { get; set; }
     //0x0279
@@ -156,7 +169,7 @@ public sealed class D2S : IDisposable
         Location.Write(writer);
         writer.WriteUInt32(MapId);
         Mercenary.Write(writer);
-        PreviewData.Write(writer);
+        PreviewData.Write(writer, Header.Version);
         Quests.Write(writer);
         Waypoints.Write(writer);
         NPCDialog.Write(writer);

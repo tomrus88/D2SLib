@@ -57,21 +57,29 @@ public class Header
 
     public static void FixSize(Span<byte> bytes)
     {
-        Span<byte> length = stackalloc byte[sizeof(uint)];
-        BinaryPrimitives.WriteUInt32LittleEndian(length, (uint)bytes.Length);
-        length.CopyTo(bytes[0x8..0xC]);
+        BinaryPrimitives.WriteInt32LittleEndian(bytes[0x8..0xC], bytes.Length);
     }
 
     public static void FixChecksum(Span<byte> bytes)
     {
-        bytes[0xC..0x10].Clear();
+        BinaryPrimitives.WriteInt32LittleEndian(bytes[0xC..0x10], 0);
         int checksum = 0;
         for (int i = 0; i < bytes.Length; i++)
         {
             checksum = bytes[i] + (checksum * 2) + (checksum < 0 ? 1 : 0);
         }
-        Span<byte> csb = stackalloc byte[sizeof(int)];
-        BinaryPrimitives.WriteInt32LittleEndian(csb, checksum);
-        csb.CopyTo(bytes[0xc..]);
+        BinaryPrimitives.WriteInt32LittleEndian(bytes[0xC..0x10], checksum);
+    }
+
+    public static void FixChecksum2(Span<byte> bytes)
+    {
+        BinaryPrimitives.WriteInt32LittleEndian(bytes[0xC..0x10], 0);
+        int checksum = 0;
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            // Use proper bit rotation instead of multiply + conditional
+            checksum = bytes[i] + ((checksum << 1) | (checksum >>> 31));
+        }
+        BinaryPrimitives.WriteInt32LittleEndian(bytes[0xC..0x10], checksum);
     }
 }

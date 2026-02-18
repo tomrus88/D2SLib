@@ -10,8 +10,10 @@ public enum ItemMode : byte
     Stored = 0x0,
     Equipped = 0x1,
     Belt = 0x2,
+    Mode3 = 0x3,
     Buffer = 0x4,
     Socket = 0x6,
+    Mode7 = 0x7
 }
 
 public enum ItemLocation : byte
@@ -76,7 +78,9 @@ public enum ItemFlags : uint
     Personalized = 0x01000000,
     LowQuality = 0x02000000,
     Runeword = 0x04000000,
-    Item = 0x08000000
+    Item = 0x08000000,
+    Unk4 = 0x10000000,  // New data block present (version > 99)
+    Unk5 = 0x20000000,  // Modifies new data block format
 }
 
 public sealed class ItemList : IDisposable
@@ -212,12 +216,72 @@ public sealed class Item : IDisposable
         {
             ReadComplete(reader, item, version);
         }
+        ReadExtraData(reader, item, version);
         reader.Align();
         for (int i = 0; i < item.NumberOfSocketedItems; i++)
         {
             item.SocketedItems.Add(Read(reader, version));
         }
         return item;
+    }
+
+    private static readonly HashSet<string> ExtraDataItemCodes = new HashSet<string>
+    {
+        "rvs ", "rvl ",
+        // Amethyst
+        "gcv ", "gfv ", "gsv ", "gzv ", "gpv ",
+        // Topaz
+        "gcy ", "gfy ", "gsy ", "gly ", "gpy ",
+        // Sapphire
+        "gcb ", "gfb ", "gsb ", "glb ", "gpb ",
+        // Emerald
+        "gcg ", "gfg ", "gsg ", "glg ", "gpg ",
+        // Ruby
+        "gcr ", "gfr ", "gsr ", "glr ", "gpr ",
+        // Diamond
+        "gcw ", "gfw ", "gsw ", "glw ", "gpw ",
+        // Skulls
+        "skc ", "skf ", "sku ", "skl ", "skz ",
+        // Runes
+        "r01 ", "r02 ", "r03 ", "r04 ", "r05 ",
+        "r06 ", "r07 ", "r08 ", "r09 ", "r10 ",
+        "r11 ", "r12 ", "r13 ", "r14 ", "r15 ",
+        "r16 ", "r17 ", "r18 ", "r19 ", "r20 ",
+        "r21 ", "r22 ", "r23 ", "r24 ", "r25 ",
+        "r26 ", "r27 ", "r28 ", "r29 ", "r30 ",
+        "r31 ", "r32 ", "r33 ",
+        // Pandemonium Keys
+        "pk1 ", "pk2 ", "pk3 ",
+        // Uber organs / special items
+        "dhn ", "bey ", "mbr ", "toa ", "tes ",
+        "ceh ", "bet ", "fed ",
+    };
+
+    private static void ReadExtraData(IBitReader reader, Item item, uint version)
+    {
+        if (version <= 99)
+            return;
+
+        if (version <= 101)
+        {
+            // Check hardcoded item code list, conditionally read 8 bits
+            if (ExtraDataItemCodes.Contains(item.Code))
+                 reader.ReadBits(8);
+
+            return;
+        }
+
+        if (version >= 104)
+        {
+            if (reader.ReadBit())
+                reader.ReadBits(8);
+
+            return;
+        }
+
+        // version 102–103
+        if (reader.ReadBit())
+            reader.ReadBits(8);
     }
 
     public static byte[] Write(Item item, uint version)
@@ -263,19 +327,20 @@ public sealed class Item : IDisposable
         {
             writer.WriteByte(bytes[i], numBits);
         }
-        writer.WriteByte((byte)0, numBits);
+        writer.WriteByte(0, numBits);
     }
 
     private static void ReadCompact(IBitReader reader, Item item, uint version)
     {
         item.Flags = (ItemFlags)reader.ReadUInt32();
-        if (version <= 0x60)
+        if (version > 96)
+        {
+            //if (reader.ReadBit())
+            item.Version = (ushort)(reader.ReadUInt16(3) + 99);
+        }
+        else
         {
             item.Version = reader.ReadUInt16(10);
-        }
-        else if (version >= 0x61)
-        {
-            item.Version = reader.ReadUInt16(3);
         }
         item.Mode = (ItemMode)reader.ReadByte(3);
         item.Location = (ItemLocation)reader.ReadByte(4);
@@ -291,16 +356,16 @@ public sealed class Item : IDisposable
         else
         {
             Span<byte> codeBuffer = stackalloc byte[4];
-            if (version <= 0x60)
-            {
-                reader.ReadBytes(codeBuffer);
-            }
-            else if (version >= 0x61)
+            if (version > 96)
             {
                 for (int i = 0; i < 4; i++)
                 {
                     codeBuffer[i] = Core.MetaData.ItemsData.ItemCodeTree.DecodeChar(reader);
                 }
+            }
+            else
+            {
+                reader.ReadBytes(codeBuffer);
             }
             item.Code = Encoding.ASCII.GetString(codeBuffer);
             int numSocketsBits = (item.Flags & ItemFlags.CompactSave) != 0 ? 1 : 3;
@@ -346,11 +411,7 @@ public sealed class Item : IDisposable
             var itemCode = item.Code.PadRight(4, ' ');
             Span<byte> code = stackalloc byte[itemCode.Length];
             Encoding.ASCII.GetBytes(itemCode, code);
-            if (version <= 0x60)
-            {
-                writer.WriteBytes(code);
-            }
-            else if (version >= 0x61)
+            if (version > 96)
             {
                 var codeTree = Core.MetaData.ItemsData.ItemCodeTree;
                 for (int i = 0; i < 4; i++)
@@ -358,6 +419,10 @@ public sealed class Item : IDisposable
                     var (bits, length) = codeTree.GetEncodedBits((char)code[i]);
                     writer.WriteBits(bits, length);
                 }
+            }
+            else
+            {
+                writer.WriteBytes(code);
             }
             int numSocketsBits = (item.Flags & ItemFlags.CompactSave) != 0 ? 1 : 3;
             if (Core.MetaData.ItemsData.IsQuest(item.Code))
@@ -447,6 +512,7 @@ public sealed class Item : IDisposable
             item.RunewordStatListIndex = reader.ReadByte(4);
             propertyLists |= (ushort)(1 << (item.RunewordStatListIndex + 1));
         }
+
         if ((item.Flags & ItemFlags.IsEar) != 0)
         {
             item.FileIndex = reader.ReadByte(3);
@@ -457,6 +523,7 @@ public sealed class Item : IDisposable
         {
             item.PlayerName = ReadPlayerName(reader, version);
         }
+
         if (version > 86)
         {
             item.HasRealmData = reader.ReadBit();
@@ -494,17 +561,33 @@ public sealed class Item : IDisposable
             item.MaxDurability = (ushort)(reader.ReadUInt16(maxDurabilityStat?["Save Bits"].ToInt32() ?? 0) - maxDurabilityStat?["Save Add"].ToUInt16() ?? 0);
             if (item.MaxDurability > 0)
             {
-                item.Durability = (ushort)(reader.ReadUInt16(durabilityStat?["Save Bits"].ToInt32() ?? 0) - durabilityStat?["Save Add"].ToUInt16() ?? 0);
+                var durBits = durabilityStat?["Save Bits"].ToInt32() ?? 0;
+                if (version < 96)
+                    durBits = 8;
+                item.Durability = (ushort)(reader.ReadUInt16(durBits) - durabilityStat?["Save Add"].ToUInt16() ?? 0);
             }
         }
-        if (isStackable)
+        if (version > 104)
         {
-            //if (item.IsUsable)
-            //{
-            //    item.MagicSuffixIds[0] = reader.ReadUInt16(5);
-            //}
-            item.Quantity = reader.ReadUInt16(version > 80 ? 9 : 8);
+            if (reader.ReadBit())
+                item.Quantity = reader.ReadUInt16(9);
         }
+        else
+        {
+            if (isStackable)
+            {
+                //if (item.IsUsable)
+                //{
+                //    item.MagicSuffixIds[0] = reader.ReadUInt16(5);
+                //}
+                item.Quantity = reader.ReadUInt16(version > 80 ? 9 : 8);
+            }
+            else if (item.Code is "xa1 " or "xa2 " or "xa3 " or "xa4 " or "xa5 ")
+            {
+                item.Quantity = reader.ReadUInt16(9);
+            }
+        }
+
         if ((item.Flags & ItemFlags.Socketed) != 0)
         {
             var numSocketsStat = itemStatCost.GetByStat("item_numsockets");
@@ -525,6 +608,34 @@ public sealed class Item : IDisposable
                 item.StatLists.Add(ItemStatList.Read(reader));
             }
             propertyLists >>= 1;
+        }
+
+        if (version > 99)
+        {
+            if ((item.Flags & ItemFlags.Unk4) != 0)
+            {
+                reader.ReadBits(16);
+
+                int count;
+
+                if ((item.Flags & ItemFlags.Unk5) == 0)
+                {
+                    reader.ReadBits(32);
+                    count = reader.ReadInt32(4);
+                    if (count < 0) count = 0;
+                    if (count > 8) count = 8;
+                }
+                else
+                {
+                    count = 1;
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    uint lo = reader.ReadUInt32();
+                    uint hi = reader.ReadUInt32();
+                }
+            }
         }
     }
 
